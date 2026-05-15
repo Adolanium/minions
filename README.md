@@ -45,15 +45,14 @@ Minions is not just a task board. After each agent turn, a lightweight completio
 **Prerequisites:** Node.js 18+ and [Hermes Agent](https://hermes-agent.nousresearch.com)
 
 ```bash
-git clone https://github.com/Agent-3-7/hermes-agent-mission-control.git
-cd hermes-agent-mission-control
-npm install
-npm run dev
+npx minionsai
 ```
 
 Open [http://localhost:6969](http://localhost:6969).
 
-For production, run `npm run prod`.
+Runs from npm with no clone, build, or install step. State lives in `~/.minions/`.
+
+Want to hack on Minions or cut a release? See [Development.md](Development.md).
 
 ## How It Works
 
