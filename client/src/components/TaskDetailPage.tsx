@@ -207,69 +207,73 @@ export function TaskDetailPage() {
             </div>
           </div>
 
-          <div className="flex shrink-0 items-center gap-2.5 sm:pt-1.5">
-            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${statusMeta.tint}`}>
-              <StatusIcon status={task.status} />
-              {statusMeta.label}
-            </span>
+          <div className="flex items-center justify-between gap-2.5 sm:shrink-0 sm:justify-start sm:pt-1.5">
+            <div className="flex items-center gap-2.5">
+              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${statusMeta.tint}`}>
+                <StatusIcon status={task.status} />
+                {statusMeta.label}
+              </span>
 
-            <span className="text-xs text-zinc-400 dark:text-zinc-500 shrink-0">
-              {timeAgo(task.updated_at)}
-            </span>
+              <span className="text-xs text-zinc-400 dark:text-zinc-500 shrink-0">
+                {timeAgo(task.updated_at)}
+              </span>
+            </div>
 
-            {task.status !== 'done' && (
-              <div className="group relative shrink-0">
-                <button
-                  onClick={() => handleStatusChange('done')}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-zinc-100 transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
-                >
-                  <Check size={13} strokeWidth={2.5} />
-                  <span className="sm:hidden">Done</span>
-                  <span className="hidden sm:inline">Mark complete</span>
-                </button>
-                <div className="pointer-events-none absolute left-1/2 top-full z-50 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-[11px] text-zinc-500 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 max-sm:hidden">
-                  <div className="absolute -top-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 border-l border-t border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900" />
-                  <span className="flex items-center gap-1">
-                    {['⌘', '⇧', 'D'].map((k) => (
-                      <kbd key={k} className="inline-flex h-4 min-w-[16px] items-center justify-center rounded border border-zinc-200 bg-zinc-100 px-1 font-sans text-[10px] text-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">{k}</kbd>
-                    ))}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            <div className="relative shrink-0">
-              <button
-                onClick={() => setShowMenu(!showMenu)}
-                className="p-1.5 rounded-md text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-              >
-                <MoreHorizontal size={16} />
-              </button>
-              {showMenu && (
-                <div ref={menuRef} className="absolute right-0 top-full mt-1 min-w-[180px] py-1 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-700 shadow-xl z-50">
-                  <p className="px-3 py-1.5 text-[11px] font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
-                    Move to
-                  </p>
-                  {TASK_STATUSES.filter((s) => s !== task.status).map((status) => (
-                    <button
-                      key={status}
-                      onClick={() => handleStatusChange(status)}
-                      className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-left"
-                    >
-                      <StatusIcon status={status} />
-                      {STATUS_META[status].label}
-                    </button>
-                  ))}
-                  <div className="my-1 border-t border-zinc-200 dark:border-zinc-800" />
+            <div className="flex items-center gap-1.5 sm:gap-2.5">
+              {task.status !== 'done' && (
+                <div className="group relative shrink-0">
                   <button
-                    onClick={() => { setShowMenu(false); setShowDeleteConfirm(true); }}
-                    className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-left"
+                    onClick={() => handleStatusChange('done')}
+                    aria-label="Mark complete"
+                    className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-zinc-900 p-1.5 text-zinc-100 transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300 sm:px-3 sm:py-1.5 sm:text-xs sm:font-semibold"
                   >
-                    <Trash2 size={14} />
-                    Delete
+                    <Check size={14} strokeWidth={2.5} />
+                    <span className="hidden sm:inline">Mark complete</span>
                   </button>
+                  <div className="pointer-events-none absolute left-1/2 top-full z-50 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-[11px] text-zinc-500 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 max-sm:hidden">
+                    <div className="absolute -top-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 border-l border-t border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900" />
+                    <span className="flex items-center gap-1">
+                      {['⌘', '⇧', 'D'].map((k) => (
+                        <kbd key={k} className="inline-flex h-4 min-w-[16px] items-center justify-center rounded border border-zinc-200 bg-zinc-100 px-1 font-sans text-[10px] text-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">{k}</kbd>
+                      ))}
+                    </span>
+                  </div>
                 </div>
               )}
+
+              <div className="relative shrink-0">
+                <button
+                  onClick={() => setShowMenu(!showMenu)}
+                  className="p-1.5 rounded-md text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                >
+                  <MoreHorizontal size={16} />
+                </button>
+                {showMenu && (
+                  <div ref={menuRef} className="absolute right-0 top-full mt-1 min-w-[180px] py-1 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-700 shadow-xl z-50">
+                    <p className="px-3 py-1.5 text-[11px] font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
+                      Move to
+                    </p>
+                    {TASK_STATUSES.filter((s) => s !== task.status).map((status) => (
+                      <button
+                        key={status}
+                        onClick={() => handleStatusChange(status)}
+                        className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-left"
+                      >
+                        <StatusIcon status={status} />
+                        {STATUS_META[status].label}
+                      </button>
+                    ))}
+                    <div className="my-1 border-t border-zinc-200 dark:border-zinc-800" />
+                    <button
+                      onClick={() => { setShowMenu(false); setShowDeleteConfirm(true); }}
+                      className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-left"
+                    >
+                      <Trash2 size={14} />
+                      Delete
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
