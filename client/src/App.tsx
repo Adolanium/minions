@@ -8,12 +8,13 @@ import { SettingsPage } from './components/SettingsPage';
 import { RoutinesPage } from './components/RoutinesPage';
 import { SkillsPage } from './components/SkillsPage';
 import { FileBrowserPage } from './components/FileBrowserPage';
+import { Toaster } from 'sonner';
 import { useTasks } from './hooks/useTasks';
 import { useTheme } from './hooks/useTheme';
 
 function AppShell() {
   useTasks();
-  useTheme();
+  const { theme } = useTheme();
 
   return (
     <div className="flex h-dvh overflow-hidden bg-surface dark:bg-zinc-900 sm:h-screen sm:bg-sidebar dark:sm:bg-zinc-950">
@@ -38,6 +39,18 @@ function AppShell() {
           </Routes>
         </HeaderProvider>
       </main>
+      <Toaster
+        theme={theme === 'system' ? 'system' : theme}
+        position="top-center"
+        toastOptions={{
+          unstyled: true,
+          classNames: {
+            toast: 'w-fit flex items-center gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 shadow-lg dark:border-zinc-700 dark:bg-zinc-900',
+            title: 'text-sm font-medium text-zinc-700 dark:text-zinc-200',
+            actionButton: 'shrink-0 cursor-pointer text-sm font-semibold text-zinc-900 hover:underline dark:text-zinc-100',
+          },
+        }}
+      />
     </div>
   );
 }

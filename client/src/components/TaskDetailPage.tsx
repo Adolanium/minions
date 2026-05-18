@@ -1,9 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { MoreHorizontal, Trash2, Loader2, Pencil } from 'lucide-react';
+import { MoreHorizontal, Trash2, Loader2, Pencil, Check } from 'lucide-react';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { StatusIcon } from './StatusIcon';
 import { useStore, optimisticMoveTask } from '../lib/store';
+import { toast } from 'sonner';
 import { deleteTask, patchTask, moveTask, markTaskViewed } from '../lib/api';
 import { TASK_STATUSES } from '@shared/types';
 import { STATUS_META } from '../lib/constants';
@@ -64,14 +65,6 @@ export function TaskDetailPage() {
   }, [taskId, initialMessage, initialSettings, navigate, location.pathname]);
 
   useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape' && !isEditableTarget(e.target)) navigate('/');
-    }
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [navigate]);
-
-  useEffect(() => {
     if (!showMenu) return;
     function handleClick(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setShowMenu(false);
@@ -104,8 +97,38 @@ export function TaskDetailPage() {
   const handleStatusChange = useCallback(async (status: TaskStatus) => {
     if (!task) return;
     setShowMenu(false);
-    await optimisticMoveTask(task, status, upsertTask, moveTask);
-  }, [task, upsertTask]);
+    if (status === 'done') {
+      const previousStatus = task.status;
+      const taskId = task.id;
+      optimisticMoveTask(task, 'done', upsertTask, moveTask);
+      navigate('/');
+      toast('Task completed', {
+        icon: <Check size={14} strokeWidth={2.5} className="text-zinc-500 dark:text-zinc-400" />,
+        action: {
+          label: 'Undo',
+          onClick: () => {
+            const { tasks, upsertTask: storeUpsert } = useStore.getState();
+            const current = tasks.find((t) => t.id === taskId);
+            if (current) optimisticMoveTask(current, previousStatus, storeUpsert, moveTask);
+          },
+        },
+      });
+    } else {
+      await optimisticMoveTask(task, status, upsertTask, moveTask);
+    }
+  }, [task, upsertTask, navigate]);
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape' && !isEditableTarget(e.target)) navigate('/');
+      if (e.key === 'd' && e.metaKey && e.shiftKey && task && task.status !== 'done') {
+        e.preventDefault();
+        handleStatusChange('done');
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [navigate, task, handleStatusChange]);
 
   const handleDelete = useCallback(async () => {
     if (!task) return;
@@ -193,6 +216,27 @@ export function TaskDetailPage() {
             <span className="text-xs text-zinc-400 dark:text-zinc-500 shrink-0">
               {timeAgo(task.updated_at)}
             </span>
+
+            {task.status !== 'done' && (
+              <div className="group relative shrink-0">
+                <button
+                  onClick={() => handleStatusChange('done')}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-zinc-100 transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+                >
+                  <Check size={13} strokeWidth={2.5} />
+                  <span className="sm:hidden">Done</span>
+                  <span className="hidden sm:inline">Mark complete</span>
+                </button>
+                <div className="pointer-events-none absolute left-1/2 top-full z-50 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-[11px] text-zinc-500 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 max-sm:hidden">
+                  <div className="absolute -top-1 left-1/2 h-2 w-2 -translate-x-1/2 rotate-45 border-l border-t border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900" />
+                  <span className="flex items-center gap-1">
+                    {['⌘', '⇧', 'D'].map((k) => (
+                      <kbd key={k} className="inline-flex h-4 min-w-[16px] items-center justify-center rounded border border-zinc-200 bg-zinc-100 px-1 font-sans text-[10px] text-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">{k}</kbd>
+                    ))}
+                  </span>
+                </div>
+              </div>
+            )}
 
             <div className="relative shrink-0">
               <button
