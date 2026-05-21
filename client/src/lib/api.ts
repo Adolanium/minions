@@ -222,6 +222,7 @@ export function uploadFileEntries(
   parentPath: string,
   files: File[],
   relativePathFor: (file: File) => string = fileRelativePath,
+  signal?: AbortSignal,
 ) {
   const formData = new FormData();
   formData.append('targetPath', parentPath);
@@ -234,6 +235,7 @@ export function uploadFileEntries(
   return request<FileUploadResponse>('/files/upload', {
     method: 'POST',
     body: formData,
+    signal,
   });
 }
 
@@ -284,10 +286,17 @@ export function deleteScheduledTask(scheduledTaskId: string) {
   });
 }
 
-export async function uploadChatAttachments(taskId: string, files: File[]): Promise<string[]> {
-  const relativePathFor = (file: File) => `uploads/${taskId}/${file.name}`;
-  await uploadFileEntries(WORKSPACE_ROOT, files, relativePathFor);
-  return files.map((file) => `${WORKSPACE_ROOT}/${relativePathFor(file)}`);
+export async function uploadChatAttachment(
+  bucketId: string,
+  fileId: string,
+  file: File,
+  signal?: AbortSignal,
+): Promise<string> {
+  // fileId (a UUID) prefixes the name so same-named files don't collide and a
+  // single attachment can be deleted by its own path.
+  const relativePath = `uploads/${bucketId}/${fileId}-${file.name}`;
+  await uploadFileEntries(WORKSPACE_ROOT, [file], () => relativePath, signal);
+  return `${WORKSPACE_ROOT}/${relativePath}`;
 }
 
 function fileRelativePath(file: File): string {

@@ -215,7 +215,22 @@ export function TaskChat({ taskId, initialMessage, initialSettings }: TaskChatPr
   const [outgoingRevealActive, setOutgoingRevealActive] = useState(false);
   const [interruptInFlight, setInterruptInFlight] = useState(false);
   const [interruptError, setInterruptError] = useState<string | null>(null);
-  const { pendingFiles, dragOver, uploadError, setUploadError, addFiles, removeFile, clearFiles, submitWithAttachments, dragHandlers, handlePaste } = useFileAttachments();
+  const {
+    pendingFiles,
+    dragOver,
+    uploadError,
+    setUploadError,
+    hasUploadingFiles,
+    uploadBlocksSend,
+    sendBlockedLabel,
+    addFiles,
+    removeFile,
+    retryFile,
+    clearFiles,
+    submitWithAttachments,
+    dragHandlers,
+    handlePaste,
+  } = useFileAttachments(taskId);
   const startupRef = useRef({ taskId, initialMessage, initialSettings });
   if (startupRef.current.taskId !== taskId) {
     startupRef.current = { taskId, initialMessage, initialSettings };
@@ -393,11 +408,10 @@ export function TaskChat({ taskId, initialMessage, initialSettings }: TaskChatPr
   const handleSubmit = useCallback(async () => {
     const text = input.trim();
     const hasFiles = pendingFiles.length > 0;
-    if ((!text && !hasFiles) || configPending) return;
+    if ((!text && !hasFiles) || configPending || uploadBlocksSend) return;
     if (queuedMessage) return;
 
-    const messageText = await submitWithAttachments(taskId, text);
-    if (messageText === null) return;
+    const messageText = submitWithAttachments(text);
 
     const settings = { model, reasoningEffort, mode: isGoalStreaming ? 'task' : runMode };
     if (taskBusyForQueue) {
@@ -418,9 +432,12 @@ export function TaskChat({ taskId, initialMessage, initialSettings }: TaskChatPr
     if (!result.ok && result.conflict) {
       pendingRevealRef.current = false;
       setOutgoingRevealActive(false);
-      setInput(text);
+      // submitWithAttachments already cleared the tray, so restore the full
+      // message (incl. attachment paths) rather than just the typed text —
+      // otherwise attachments are silently dropped on a busy-task conflict.
+      setInput(messageText);
     }
-  }, [submitWithAttachments, configPending, input, pendingFiles, queuedMessage, model, reasoningEffort, runMode, isGoalStreaming, taskBusyForQueue, sendMessage, taskId]);
+  }, [submitWithAttachments, configPending, uploadBlocksSend, input, pendingFiles, queuedMessage, model, reasoningEffort, runMode, isGoalStreaming, taskBusyForQueue, sendMessage, taskId]);
 
   const handleCompact = useCallback(async () => {
     if (compactionBlocker || isStreaming) return;
@@ -491,9 +508,9 @@ export function TaskChat({ taskId, initialMessage, initialSettings }: TaskChatPr
       }
     : {
         onClick: handleSubmit,
-        disabled: (!input.trim() && pendingFiles.length === 0) || configPending || queuedMessage !== null,
-        label: 'Send message',
-        icon: <ArrowUp size={14} />,
+        disabled: (!input.trim() && pendingFiles.length === 0) || configPending || queuedMessage !== null || uploadBlocksSend,
+        label: sendBlockedLabel ?? 'Send message',
+        icon: hasUploadingFiles ? <Loader2 size={14} className="animate-spin" /> : <ArrowUp size={14} />,
       };
 
   return (
@@ -623,7 +640,7 @@ export function TaskChat({ taskId, initialMessage, initialSettings }: TaskChatPr
             rows={2}
             className="w-full resize-none bg-transparent px-4 pt-3 pb-1 text-sm leading-relaxed text-zinc-900 placeholder-zinc-400 focus:outline-none disabled:opacity-60 dark:text-zinc-100 dark:placeholder-zinc-500 sm:px-5"
           />
-          <AttachmentTray files={pendingFiles} onRemove={removeFile} />
+          <AttachmentTray files={pendingFiles} onRemove={removeFile} onRetry={retryFile} />
           {uploadError && <UploadErrorBar error={uploadError} onDismiss={() => setUploadError(null)} />}
           {interruptError && <UploadErrorBar error={interruptError} onDismiss={() => setInterruptError(null)} />}
           {queuedMessage && (

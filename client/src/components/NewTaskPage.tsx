@@ -16,7 +16,24 @@ export function NewTaskPage() {
   const [runMode, setRunMode] = useState<ChatRunMode>('task');
   const [isCreating, setIsCreating] = useState(false);
   const { defaults, modelGroups, model, setModel, reasoningEffort, setReasoningEffort, isLoading } = useAgentConfig();
-  const { pendingFiles, dragOver, uploadError, setUploadError, addFiles, removeFile, submitWithAttachments, dragHandlers, handlePaste } = useFileAttachments();
+  const uploadBucketRef = useRef<string | null>(null);
+  if (uploadBucketRef.current === null) uploadBucketRef.current = `draft-${crypto.randomUUID()}`;
+  const uploadBucketId = uploadBucketRef.current;
+  const {
+    pendingFiles,
+    dragOver,
+    uploadError,
+    setUploadError,
+    hasUploadingFiles,
+    uploadBlocksSend,
+    sendBlockedLabel,
+    addFiles,
+    removeFile,
+    retryFile,
+    submitWithAttachments,
+    dragHandlers,
+    handlePaste,
+  } = useFileAttachments(uploadBucketId);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -34,18 +51,14 @@ export function NewTaskPage() {
   const handleSubmit = useCallback(async () => {
     const text = input.trim();
     const hasFiles = pendingFiles.length > 0;
-    if ((!text && !hasFiles) || isCreating || (!defaults && isLoading)) return;
+    if ((!text && !hasFiles) || isCreating || (!defaults && isLoading) || uploadBlocksSend) return;
 
     setIsCreating(true);
     setUploadError(null);
     try {
       const description = text || pendingFiles.map((f) => f.file.name).join(', ');
       const { task } = await createTask(description);
-      const initialMessage = await submitWithAttachments(task.id, text);
-      if (initialMessage === null) {
-        setIsCreating(false);
-        return;
-      }
+      const initialMessage = submitWithAttachments(text);
       navigate(`/tasks/${task.id}`, {
         state: {
           initialMessage,
@@ -56,7 +69,7 @@ export function NewTaskPage() {
       setUploadError(toErrorMessage(err, 'Failed to create task'));
       setIsCreating(false);
     }
-  }, [defaults, input, isCreating, isLoading, model, navigate, pendingFiles, reasoningEffort, runMode, submitWithAttachments, setUploadError]);
+  }, [defaults, uploadBlocksSend, input, isCreating, isLoading, model, navigate, pendingFiles, reasoningEffort, runMode, submitWithAttachments, setUploadError]);
 
   const handleToggleGoalMode = useCallback(() => setRunMode(toggleRunMode), []);
 
@@ -69,8 +82,8 @@ export function NewTaskPage() {
   );
 
   return (
-    <div className="relative flex-1 flex flex-col items-center justify-center px-6 pb-24" {...dragHandlers}>
-      {dragOver && <AttachDropOverlay />}
+    <div className="relative flex-1 flex flex-col items-center justify-center px-6 pb-24" {...(isCreating ? {} : dragHandlers)}>
+      {dragOver && !isCreating && <AttachDropOverlay />}
       <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 mb-6">
         What do you need done?
       </h1>
@@ -82,12 +95,12 @@ export function NewTaskPage() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            onPaste={handlePaste}
+            onPaste={isCreating ? undefined : handlePaste}
             placeholder={runMode === 'goal' ? GOAL_MODE_PLACEHOLDER : 'Describe your task in detail...'}
             rows={4}
             className="w-full resize-none bg-transparent px-5 pt-4 pb-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none leading-relaxed"
           />
-          <AttachmentTray files={pendingFiles} onRemove={removeFile} />
+          <AttachmentTray files={pendingFiles} onRemove={removeFile} onRetry={retryFile} />
           {uploadError && <UploadErrorBar error={uploadError} onDismiss={() => setUploadError(null)} />}
           <div className="flex items-center justify-between gap-3 px-4 pb-3">
             <div className="flex min-w-0 items-center gap-2">
@@ -106,10 +119,12 @@ export function NewTaskPage() {
             </div>
             <button
               onClick={handleSubmit}
-              disabled={(!input.trim() && pendingFiles.length === 0) || isCreating || (!defaults && isLoading)}
+              disabled={(!input.trim() && pendingFiles.length === 0) || isCreating || (!defaults && isLoading) || uploadBlocksSend}
+              title={sendBlockedLabel ?? 'Send message'}
+              aria-label={sendBlockedLabel ?? 'Send message'}
               className="p-2.5 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 disabled:opacity-30 hover:bg-zinc-700 dark:hover:bg-zinc-300 transition-colors"
             >
-              {isCreating ? (
+              {isCreating || hasUploadingFiles ? (
                 <Loader2 size={16} className="animate-spin" />
               ) : (
                 <ArrowUp size={16} />
