@@ -189,6 +189,7 @@ interface ToolbarSelectProps {
   disabled?: boolean;
   title: string;
   labelMaxWidthClass?: string;
+  compactMobile?: boolean;
   minMenuWidth?: number;
   searchable?: boolean;
   searchPlaceholder?: string;
@@ -202,6 +203,7 @@ function ToolbarSelect({
   disabled = false,
   title,
   labelMaxWidthClass = 'max-w-[11rem] sm:max-w-[14rem]',
+  compactMobile = false,
   minMenuWidth = 180,
   searchable = false,
   searchPlaceholder = 'Search...',
@@ -356,6 +358,7 @@ function ToolbarSelect({
         type="button"
         disabled={disabled}
         title={title}
+        aria-label={compactMobile ? title : undefined}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
@@ -366,10 +369,12 @@ function ToolbarSelect({
             setOpen(true);
           }
         }}
-        className="inline-flex h-9 max-w-full items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2.5 text-xs font-medium text-zinc-600 shadow-sm transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700/70"
+        className={`inline-flex h-9 min-w-0 max-w-full items-center gap-1.5 rounded-lg border border-zinc-200 bg-white text-xs font-medium text-zinc-600 shadow-sm transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700/70 ${
+          compactMobile ? 'w-9 justify-center px-0 sm:w-auto sm:justify-start sm:px-2.5' : 'px-2.5'
+        }`}
       >
         <Icon size={12} className="shrink-0" />
-        <span className="min-w-0 max-w-[4rem] truncate sm:hidden">
+        <span className={compactMobile ? 'sr-only sm:hidden' : 'min-w-0 max-w-[4rem] truncate sm:hidden'}>
           {selectedLabel}
         </span>
         <span className={`hidden min-w-0 truncate sm:block ${labelMaxWidthClass}`}>
@@ -377,7 +382,7 @@ function ToolbarSelect({
         </span>
         <ChevronDown
           size={13}
-          className={`shrink-0 text-zinc-400 transition-transform dark:text-zinc-500 ${open ? 'rotate-180' : ''}`}
+          className={`shrink-0 text-zinc-400 transition-transform dark:text-zinc-500 ${compactMobile ? 'hidden sm:block' : ''} ${open ? 'rotate-180' : ''}`}
         />
       </button>
 
@@ -484,6 +489,7 @@ export interface ModelPickerProps {
   modelGroups: AgentModelGroup[];
   disabled?: boolean;
   title: string;
+  compactMobile?: boolean;
   onChange: (value: string, selection?: ModelPickerSelection) => void;
 }
 
@@ -557,6 +563,7 @@ export function ModelPicker({
   modelGroups,
   disabled = false,
   title,
+  compactMobile = false,
   onChange,
 }: ModelPickerProps) {
   const [open, setOpen] = useState(false);
@@ -812,10 +819,10 @@ export function ModelPicker({
             setOpen(true);
           }
         }}
-        className="inline-flex h-9 max-w-full items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2.5 text-xs font-medium text-zinc-600 shadow-sm transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700/70"
+        className="inline-flex h-9 min-w-0 max-w-full items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2.5 text-xs font-medium text-zinc-600 shadow-sm transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700/70"
       >
         <Sparkles size={12} className="shrink-0" />
-        <span className="min-w-0 max-w-[5.75rem] truncate sm:hidden">
+        <span className={`min-w-0 truncate sm:hidden ${compactMobile ? 'max-w-[4.25rem]' : 'max-w-[5.75rem]'}`}>
           {selectedLabel}
         </span>
         <span className="hidden min-w-0 max-w-[18rem] truncate sm:block">
@@ -952,6 +959,7 @@ interface InputToolbarProps {
   defaults?: AgentDefaults | null;
   modelGroups?: AgentModelGroup[];
   disabled?: boolean;
+  compactMobile?: boolean;
   onModelChange: (model: string | null, provider?: string | null) => void;
   onReasoningEffortChange: (effort: ReasoningEffort | null) => void;
   onRunModeChange?: (mode: ChatRunMode) => void;
@@ -980,10 +988,12 @@ function LoadingToolbarButton({
 function GoalModeToggle({
   value,
   disabled = false,
+  compactMobile = false,
   onChange,
 }: {
   value: ChatRunMode;
   disabled?: boolean;
+  compactMobile?: boolean;
   onChange: (value: ChatRunMode) => void;
 }) {
   const active = value === 'goal';
@@ -999,14 +1009,16 @@ function GoalModeToggle({
         aria-describedby={tooltipId}
         aria-label={`${active ? 'Turn off' : 'Turn on'} goal mode. Shortcut: ${GOAL_MODE_SHORTCUT_LABEL}`}
         onClick={() => onChange(active ? 'task' : 'goal')}
-        className={`inline-flex h-9 max-w-full items-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+        className={`inline-flex h-9 max-w-full items-center gap-1.5 rounded-lg border text-xs font-semibold shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+          compactMobile ? 'w-9 justify-center px-0 sm:w-auto sm:justify-start sm:px-2.5' : 'px-2.5'
+        } ${
           active
             ? 'border-zinc-500 bg-zinc-100 text-zinc-950 ring-2 ring-zinc-900/10 hover:bg-zinc-200 dark:border-zinc-400 dark:bg-zinc-700 dark:text-zinc-50 dark:ring-white/10 dark:hover:bg-zinc-600'
             : 'border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700/70'
         }`}
       >
         <Target size={12} className="shrink-0" strokeWidth={2.5} />
-        <span>Goal</span>
+        <span className={compactMobile ? 'sr-only sm:not-sr-only' : undefined}>Goal</span>
       </button>
       <div
         id={tooltipId}
@@ -1040,6 +1052,7 @@ export function InputToolbar({
   defaults,
   modelGroups = [],
   disabled = false,
+  compactMobile = false,
   onModelChange,
   onReasoningEffortChange,
   onRunModeChange,
@@ -1050,7 +1063,7 @@ export function InputToolbar({
 
   if (!defaults) {
     return (
-      <div className="flex items-center gap-2 min-w-0 flex-wrap">
+      <div className={`flex min-w-0 items-center gap-2 ${compactMobile ? 'flex-nowrap' : 'flex-wrap'}`}>
         <LoadingToolbarButton icon={Sparkles} className="[&>span]:w-24" />
         <LoadingToolbarButton icon={Zap} className="[&>span]:w-14" />
       </div>
@@ -1058,7 +1071,7 @@ export function InputToolbar({
   }
 
   return (
-    <div className="flex items-center gap-2 min-w-0 flex-wrap">
+    <div className={`flex min-w-0 items-center gap-2 ${compactMobile ? 'flex-nowrap' : 'flex-wrap'}`}>
       <ModelPicker
         value={model ?? ''}
         provider={provider}
@@ -1067,6 +1080,7 @@ export function InputToolbar({
         modelGroups={modelGroups}
         disabled={disabled}
         title={model ? `Model: ${model}` : defaultModel ? `Default: ${defaultModel}` : 'Select model'}
+        compactMobile={compactMobile}
         onChange={(nextModel, selection) => onModelChange(nextModel || null, selection?.provider ?? null)}
       />
 
@@ -1076,6 +1090,7 @@ export function InputToolbar({
         options={REASONING_OPTIONS}
         disabled={disabled}
         title={`Reasoning: ${REASONING_LABELS[effectiveReasoning]}`}
+        compactMobile={compactMobile}
         minMenuWidth={180}
         onChange={(nextReasoning) => onReasoningEffortChange(nextReasoning as ReasoningEffort)}
       />
@@ -1084,6 +1099,7 @@ export function InputToolbar({
         <GoalModeToggle
           value={runMode}
           disabled={disabled}
+          compactMobile={compactMobile}
           onChange={onRunModeChange}
         />
       )}

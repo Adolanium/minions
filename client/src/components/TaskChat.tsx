@@ -654,8 +654,8 @@ export function TaskChat({ taskId, initialMessage, initialSettings }: TaskChatPr
               onRetry={handleRetryQueuedMessage}
             />
           )}
-          <div className="flex items-end justify-between gap-3 px-3 pb-3 sm:px-4">
-            <div className="flex min-w-0 items-center gap-2">
+          <div className="flex items-center justify-between gap-2 px-3 pb-3 sm:gap-3 sm:px-4">
+            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
               <AttachButton onFiles={addFiles} disabled={configPending} />
               <InputToolbar
                 model={model}
@@ -665,6 +665,7 @@ export function TaskChat({ taskId, initialMessage, initialSettings }: TaskChatPr
                 defaults={toolbarDefaults}
                 modelGroups={modelGroups}
                 disabled={goalToggleDisabled}
+                compactMobile
                 onModelChange={(nextModel, nextProvider) => {
                   setModel(nextModel);
                   setProvider(nextProvider ?? null);

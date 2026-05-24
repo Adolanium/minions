@@ -1545,7 +1545,7 @@ def _handle_request(request: dict[str, Any]) -> None:
         elif request_type == "models.list":
             _result(request_id, _list_models())
         elif request_type == "scheduledTasks.list":
-            _result(request_id, list_scheduled_tasks(bool(request.get("includeDisabled"))))
+            _result(request_id, list_scheduled_tasks(bool(request.get("includeDisabled")), request.get("limit")))
         elif request_type == "scheduledTasks.get":
             _result(request_id, get_scheduled_task(request.get("scheduledTaskId")))
         elif request_type == "scheduledTasks.create":

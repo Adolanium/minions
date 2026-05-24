@@ -84,7 +84,7 @@ export interface AgentAdapter {
 
   evaluateGoal(sessionId: string, responseText: string): Promise<GoalDecision>;
 
-  listScheduledTasks(includeDisabled?: boolean): Promise<ScheduledTask[]>;
+  listScheduledTasks(includeDisabled?: boolean, limit?: number): Promise<ScheduledTask[]>;
 
   getScheduledTask(scheduledTaskId: string): Promise<ScheduledTask | null>;
 

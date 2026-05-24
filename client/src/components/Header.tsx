@@ -87,7 +87,7 @@ export function Header() {
   if (isSettings) {
     title = 'Settings';
   } else if (isScheduledTasks) {
-    title = 'Scheduled Tasks';
+    title = 'Recurring';
   } else if (isSkills) {
     title = 'Skills';
   } else if (isFiles) {
@@ -98,9 +98,8 @@ export function Header() {
     title = 'New Task';
     showParent = true;
   } else if (task) {
-    title = task.title;
+    title = 'Task';
     showParent = true;
-    truncate = true;
   }
 
   if (pageHeader) {
