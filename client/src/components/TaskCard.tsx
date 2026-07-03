@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
-import { Clock, Loader2, MoreHorizontal, Target } from 'lucide-react';
+import { Clock, Loader2, MoreHorizontal, Pin, Target } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { Task, TaskRunState } from '@shared/types';
 import { formatCost, formatTokenCount, goalTurnLabel, timeAgo } from '../lib/format';
@@ -29,13 +29,18 @@ function TaskCardBody({ task, run }: { task: Task; run?: TaskRunState }) {
 
   return (
     <div>
-      <RenameTitle
-        value={task.title}
-        identity={task.id}
-        className={`block text-sm text-zinc-900 dark:text-zinc-100 line-clamp-2 ${
-          isUnseen ? 'font-semibold' : 'font-medium'
-        }`}
-      />
+      <div className="flex min-w-0 items-start gap-1.5">
+        {task.pinned && (
+          <Pin size={12} className="mt-0.5 shrink-0 fill-current text-zinc-400 dark:text-zinc-500" />
+        )}
+        <RenameTitle
+          value={task.title}
+          identity={task.id}
+          className={`block text-sm text-zinc-900 dark:text-zinc-100 line-clamp-2 ${
+            isUnseen ? 'font-semibold' : 'font-medium'
+          }`}
+        />
+      </div>
       {task.description && (
         <p
           className={`mt-1 text-xs line-clamp-1 ${

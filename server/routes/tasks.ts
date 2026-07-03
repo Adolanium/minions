@@ -87,10 +87,14 @@ tasksRouter.post('/', (req, res) => {
 });
 
 tasksRouter.patch('/:id', (req, res) => {
-  const allowed = ['title', 'description', 'status', 'toolsets'] as const;
+  const allowed = ['title', 'description', 'status', 'toolsets', 'pinned'] as const;
   const fields: Record<string, unknown> = {};
   for (const key of allowed) {
     if (req.body[key] !== undefined) fields[key] = req.body[key];
+  }
+
+  if (fields.pinned !== undefined && typeof fields.pinned !== 'boolean') {
+    return res.status(400).json({ error: 'pinned must be a boolean' });
   }
 
   if (fields.status && !ALL_TASK_STATUSES.includes(fields.status as TaskStatus)) {

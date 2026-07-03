@@ -33,6 +33,7 @@ export interface Task {
   toolsets: string[] | null;
   depends_on_task_id: string | null;
   pending_prompt: string | null;
+  pinned: boolean;
   created_at: number;
   updated_at: number;
   last_agent_response_at: number | null;
