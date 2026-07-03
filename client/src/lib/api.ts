@@ -5,6 +5,8 @@ import type {
   AgentToolsetsResponse,
   AppVersion,
   AnalyticsReport,
+  AuxiliaryModelsResponse,
+  ModelInfoResponse,
   CompactResult,
   FileCreateResponse,
   FileCreateType,
@@ -292,6 +294,21 @@ export function writeFile(path: string, content: string, expectedModifiedAt?: nu
 
 export function fetchAnalytics(days = 30) {
   return request<AnalyticsReport>(`/analytics?days=${days}`);
+}
+
+export function fetchModelInfo() {
+  return request<ModelInfoResponse>('/models/info');
+}
+
+export function fetchAuxiliaryModels() {
+  return request<AuxiliaryModelsResponse>('/models/auxiliary');
+}
+
+export function setAuxiliaryModel(slot: string, model: string | null, provider: string | null) {
+  return request<AuxiliaryModelsResponse>(`/models/auxiliary/${encodeURIComponent(slot)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ model, provider }),
+  });
 }
 
 export function fetchMemory() {

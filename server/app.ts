@@ -8,6 +8,7 @@ import { createAgentRouter, createTaskAgentSettingsRouter } from './routes/agent
 import { createScheduledTasksRouter } from './routes/scheduled-tasks.js';
 import { createSearchRouter } from './routes/search.js';
 import { createAnalyticsRouter } from './routes/analytics.js';
+import { createModelsRouter } from './routes/models.js';
 import { createSubagentsRouter } from './routes/subagents.js';
 import { skillsRouter } from './routes/skills.js';
 import { filesRouter } from './routes/files.js';
@@ -53,6 +54,7 @@ app.use('/api/agent', createAgentRouter(adapter));
 app.use('/api/scheduled-tasks', createScheduledTasksRouter(adapter));
 app.use('/api/search', createSearchRouter(adapter));
 app.use('/api/analytics', createAnalyticsRouter(adapter));
+app.use('/api/models', createModelsRouter(adapter));
 app.use('/api/skills', skillsRouter);
 app.use('/api/templates', templatesRouter);
 app.use('/api/notifications', notificationsRouter);

@@ -283,6 +283,44 @@ export interface AgentModelsResponse {
   groups: AgentModelGroup[];
 }
 
+export interface ModelCapabilities {
+  supportsTools: boolean;
+  supportsVision: boolean;
+  supportsReasoning: boolean;
+  contextWindow: number | null;
+  maxOutputTokens: number | null;
+  modelFamily: string | null;
+}
+
+export interface ModelPricing {
+  inputPerMillion: number | null;
+  outputPerMillion: number | null;
+  cacheReadPerMillion: number | null;
+  source: string | null;
+}
+
+export interface ModelInfoResponse {
+  model: string | null;
+  provider: string | null;
+  baseUrl: string | null;
+  capabilities: ModelCapabilities | null;
+  pricing: ModelPricing | null;
+}
+
+export interface AuxiliaryModelSlot {
+  key: string;
+  label: string;
+  description: string;
+  provider: string | null;
+  model: string | null;
+  isAuto: boolean;
+}
+
+export interface AuxiliaryModelsResponse {
+  main: { provider: string | null; model: string | null };
+  slots: AuxiliaryModelSlot[];
+}
+
 export interface AgentToolsetsResponse {
   toolsets: string[];
   defaultToolsets: string[];
