@@ -1,4 +1,4 @@
-import type { Task, TaskMessage } from '../shared/types.js';
+import type { LiveChatMessage, Task } from '../shared/types.js';
 
 function formatTimestamp(ms: number | null | undefined): string {
   if (!ms) return '';
@@ -13,7 +13,7 @@ function roleHeading(role: string): string {
   return role.charAt(0).toUpperCase() + role.slice(1);
 }
 
-export function taskTranscriptMarkdown(task: Task, messages: TaskMessage[]): string {
+export function taskTranscriptMarkdown(task: Task, messages: LiveChatMessage[]): string {
   const lines: string[] = [];
   lines.push(`# ${task.title}`);
   lines.push('');
