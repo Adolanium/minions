@@ -21,6 +21,7 @@ import {
   FileText,
   Folder,
   FolderPlus,
+  GitBranch,
   Info,
   Loader2,
   Pencil,
@@ -30,11 +31,12 @@ import {
   Upload,
   X,
 } from 'lucide-react';
-import type { FileCreateType, FileEntry, FileListResponse, FileReadResponse } from '@shared/types';
+import type { FileCreateType, FileEntry, FileListResponse, FileReadResponse, GitStatusResponse } from '@shared/types';
 import {
   ApiError,
   createFileEntry,
   deleteFileEntry,
+  fetchGitStatus,
   fileDownloadUrl,
   listFiles,
   readFile,
@@ -92,6 +94,18 @@ export function FileBrowserPage() {
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const [backStack, setBackStack] = useState<string[]>([]);
   const [forwardStack, setForwardStack] = useState<string[]>([]);
+  const [gitStatus, setGitStatus] = useState<GitStatusResponse | null>(null);
+
+  const directoryPath = directory?.path ?? null;
+  useEffect(() => {
+    if (!directoryPath) return;
+    let cancelled = false;
+    setGitStatus(null);
+    fetchGitStatus(directoryPath)
+      .then((status) => { if (!cancelled) setGitStatus(status); })
+      .catch(() => { if (!cancelled) setGitStatus(null); });
+    return () => { cancelled = true; };
+  }, [directoryPath]);
 
   const isDirty = openFile ? content !== openFile.content : false;
   const selectedPath = selectedEntry?.path ?? null;
@@ -544,6 +558,18 @@ export function FileBrowserPage() {
                 className="min-w-0 flex-1 border-0 bg-transparent p-0 font-mono text-xs font-semibold text-zinc-900 outline-none disabled:opacity-50 dark:text-zinc-100"
               />
               {loadingDirectory && <Loader2 size={14} className="shrink-0 animate-spin text-zinc-400" />}
+              {gitStatus?.repo && gitStatus.branch && (
+                <span
+                  title={`Git branch ${gitStatus.branch}${gitStatus.dirtyCount ? ` — ${gitStatus.dirtyCount} changed file(s)` : ' — clean'}`}
+                  className="inline-flex max-w-[10rem] shrink-0 items-center gap-1 rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium leading-none text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+                >
+                  <GitBranch size={11} className="shrink-0" />
+                  <span className="truncate">{gitStatus.branch}</span>
+                  {(gitStatus.dirtyCount ?? 0) > 0 && (
+                    <span className="shrink-0 text-amber-600 dark:text-amber-400">±{gitStatus.dirtyCount}</span>
+                  )}
+                </span>
+              )}
             </form>
 
             <div className="flex items-center justify-end gap-1">
