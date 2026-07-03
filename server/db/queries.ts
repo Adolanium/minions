@@ -23,14 +23,17 @@ const stmtInsertTask = db.prepare(`
   INSERT INTO tasks (
     id, title, description, status, agent_model, agent_provider, reasoning_effort,
     created_at, updated_at, last_agent_response_at, last_viewed_at,
-    last_context_used_tokens, last_context_window_tokens
+    last_context_used_tokens, last_context_window_tokens, depends_on_task_id, pending_prompt
   )
   VALUES (
     @id, @title, @description, @status, @agent_model, @agent_provider, @reasoning_effort,
     @created_at, @updated_at, @last_agent_response_at, @last_viewed_at,
-    @last_context_used_tokens, @last_context_window_tokens
+    @last_context_used_tokens, @last_context_window_tokens, @depends_on_task_id, @pending_prompt
   )
 `);
+const stmtDependentTasks = db.prepare(
+  'SELECT * FROM tasks WHERE depends_on_task_id = ? AND pending_prompt IS NOT NULL',
+);
 const stmtDeleteTask = db.prepare('DELETE FROM tasks WHERE id = ?');
 const stmtTouchTask = db.prepare('UPDATE tasks SET updated_at = ? WHERE id = ?');
 const stmtMarkTaskViewed = db.prepare(`
@@ -84,6 +87,8 @@ export function insertTask(task: {
   agent_provider?: string | null;
   reasoning_effort?: ReasoningEffort | null;
   last_agent_response_at?: number | null;
+  depends_on_task_id?: string | null;
+  pending_prompt?: string | null;
 }): Task {
   const id = uuid();
   const now = Date.now();
@@ -103,9 +108,16 @@ export function insertTask(task: {
     last_context_window_tokens: null,
     estimated_cost_usd: null,
     toolsets: null,
+    depends_on_task_id: task.depends_on_task_id ?? null,
+    pending_prompt: task.pending_prompt ?? null,
   };
   stmtInsertTask.run(row);
   return row as Task;
+}
+
+export function getDependentTasks(taskId: string): Task[] {
+  const rows = stmtDependentTasks.all(taskId) as Record<string, unknown>[];
+  return rows.map(toTask);
 }
 
 const ALLOWED_UPDATE_FIELDS = new Set<string>([
@@ -116,6 +128,8 @@ const ALLOWED_UPDATE_FIELDS = new Set<string>([
   'agent_provider',
   'reasoning_effort',
   'toolsets',
+  'depends_on_task_id',
+  'pending_prompt',
   'last_agent_response_at',
   'last_context_used_tokens',
   'last_context_window_tokens',
@@ -132,6 +146,8 @@ type TaskUpdateFields = Pick<
   | 'agent_provider'
   | 'reasoning_effort'
   | 'toolsets'
+  | 'depends_on_task_id'
+  | 'pending_prompt'
   | 'last_agent_response_at'
   | 'last_context_used_tokens'
   | 'last_context_window_tokens'

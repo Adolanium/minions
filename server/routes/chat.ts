@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { contextFromTask, getTask, updateTask, touchTask, recordAgentResponse } from '../db/queries.js';
+import { contextFromTask, getDependentTasks, getTask, updateTask, touchTask, recordAgentResponse } from '../db/queries.js';
 import { adapter } from '../app.js';
 import { broadcast, initSSE } from '../events.js';
 import {
@@ -335,29 +335,12 @@ async function consumeGoalRun(runTask: Task, sessionId: string, initialContent: 
   }
 }
 
-chatRouter.post('/:id/messages', async (req, res) => {
-  const task = getTask(req.params.id);
-  if (!task) return res.status(404).json({ error: 'Task not found' });
-
-  const { content } = req.body;
-  if (!content || typeof content !== 'string') {
-    return res.status(400).json({ error: 'content is required' });
-  }
-
-  let runSettings: ReturnType<typeof parseRunSettingsBody>;
-  let mode: ChatRunMode;
-  try {
-    runSettings = parseRunSettingsBody(req.body);
-    mode = parseChatRunMode(req.body);
-  } catch (error) {
-    return res.status(400).json({ error: toErrorMessage(error, 'Invalid run settings') });
-  }
-
-  const activeRun = getRunStatus(task.id);
-  if (isTaskRunActive(activeRun)) {
-    return res.status(409).json({ error: 'This task already has a message in progress' });
-  }
-
+export async function startTaskRun(
+  task: Task,
+  content: string,
+  mode: ChatRunMode,
+  runSettings: ReturnType<typeof parseRunSettingsBody>,
+): Promise<string> {
   let runTask = task;
   const taskUpdates: Partial<Pick<Task, 'status' | 'agent_model' | 'agent_provider' | 'reasoning_effort' | 'toolsets'>> = {};
   if (runSettings.hasFields) {
@@ -381,7 +364,7 @@ chatRouter.post('/:id/messages', async (req, res) => {
 
   if (Object.keys(taskUpdates).length > 0) {
     const updated = updateTask(task.id, taskUpdates);
-    if (!updated) return res.status(404).json({ error: 'Task not found' });
+    if (!updated) throw new Error('Task not found');
     runTask = updated;
     broadcast({ type: 'task_updated', task: updated });
   }
@@ -389,27 +372,90 @@ chatRouter.post('/:id/messages', async (req, res) => {
   const sessionId = runTask.id;
 
   if (mode === 'goal') {
-    let goalState: GoalStateSnapshot;
-    try {
-      goalState = await adapter.setGoal(sessionId, content);
-    } catch (error) {
-      return res.status(503).json({ error: toErrorMessage(error, 'Could not set Hermes goal') });
-    }
-
+    const goalState: GoalStateSnapshot = await adapter.setGoal(sessionId, content);
     const { snapshot, state } = startGoalRun(runTask.id, sessionId, goalState);
     broadcast({ type: 'task_run_updated', run: state });
     broadcastLive(runTask.id, { type: 'snapshot', run: snapshot });
     void consumeGoalRun(runTask, sessionId, content, snapshot.runId);
-
-    return res.status(202).json({ runId: snapshot.runId });
+    return snapshot.runId;
   }
 
   const { snapshot, state } = startRun(runTask.id, sessionId, content);
   broadcast({ type: 'task_run_updated', run: state });
   broadcastLive(runTask.id, { type: 'snapshot', run: snapshot });
   void consumeChatRun(runTask, sessionId, content, snapshot.runId);
+  return snapshot.runId;
+}
 
-  res.status(202).json({ runId: snapshot.runId });
+// Clears pending_prompt before starting the run so a concurrent release of the
+// same task (another dependency completing, or a manual start-now) can never
+// fire the stored prompt twice.
+async function releaseTask(taskId: string): Promise<boolean> {
+  const task = getTask(taskId);
+  if (!task || !task.pending_prompt) return false;
+  const prompt = task.pending_prompt;
+
+  const cleared = updateTask(task.id, { depends_on_task_id: null, pending_prompt: null });
+  if (!cleared) return false;
+  broadcast({ type: 'task_updated', task: cleared });
+
+  await startTaskRun(cleared, prompt, 'task', { taskFields: {}, hasFields: false });
+  return true;
+}
+
+export async function releaseDependentTasks(taskId: string): Promise<void> {
+  const dependents = getDependentTasks(taskId);
+  for (const dependent of dependents) {
+    try {
+      await releaseTask(dependent.id);
+    } catch {
+      // One dependent failing to start should not block the others.
+    }
+  }
+}
+
+chatRouter.post('/:id/messages', async (req, res) => {
+  const task = getTask(req.params.id);
+  if (!task) return res.status(404).json({ error: 'Task not found' });
+
+  const { content } = req.body;
+  if (!content || typeof content !== 'string') {
+    return res.status(400).json({ error: 'content is required' });
+  }
+
+  let runSettings: ReturnType<typeof parseRunSettingsBody>;
+  let mode: ChatRunMode;
+  try {
+    runSettings = parseRunSettingsBody(req.body);
+    mode = parseChatRunMode(req.body);
+  } catch (error) {
+    return res.status(400).json({ error: toErrorMessage(error, 'Invalid run settings') });
+  }
+
+  const activeRun = getRunStatus(task.id);
+  if (isTaskRunActive(activeRun)) {
+    return res.status(409).json({ error: 'This task already has a message in progress' });
+  }
+
+  try {
+    const runId = await startTaskRun(task, content, mode, runSettings);
+    res.status(202).json({ runId });
+  } catch (error) {
+    res.status(503).json({ error: toErrorMessage(error, 'Could not start Hermes run') });
+  }
+});
+
+chatRouter.post('/:id/start-now', async (req, res) => {
+  const task = getTask(req.params.id);
+  if (!task) return res.status(404).json({ error: 'Task not found' });
+  if (!task.pending_prompt) return res.status(409).json({ error: 'This task is not waiting on a dependency' });
+
+  try {
+    await releaseTask(task.id);
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(503).json({ error: toErrorMessage(error, 'Could not start task') });
+  }
 });
 
 chatRouter.post('/:id/interrupt', async (req, res) => {

@@ -1,10 +1,10 @@
 import { useCallback, useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
-import { Loader2, MoreHorizontal, Target } from 'lucide-react';
+import { Clock, Loader2, MoreHorizontal, Target } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { Task, TaskRunState } from '@shared/types';
 import { formatCost, goalTurnLabel, timeAgo } from '../lib/format';
-import { isActiveRun } from '../lib/store';
+import { isActiveRun, useStore } from '../lib/store';
 import { hasUnseenAgentResponse } from '../lib/taskState';
 import { TaskContextMenu } from './TaskContextMenu';
 import { RenameTitle } from './RenameTitle';
@@ -12,6 +12,9 @@ import { RenameTitle } from './RenameTitle';
 const BUSY_LABELS: Record<string, string> = { compact: 'Compacting...', goal: 'Working toward goal...' };
 
 function TaskCardBody({ task, run }: { task: Task; run?: TaskRunState }) {
+  const dependencyTitle = useStore((s) => (
+    task.depends_on_task_id ? s.tasks.find((t) => t.id === task.depends_on_task_id)?.title : undefined
+  ));
   const isUnseen = hasUnseenAgentResponse(task);
   const isBusy = !!run && isActiveRun(run);
   const isGoalRun = run?.kind === 'goal' && run.status === 'streaming';
@@ -56,6 +59,17 @@ function TaskCardBody({ task, run }: { task: Task; run?: TaskRunState }) {
         {task.estimated_cost_usd != null && task.estimated_cost_usd > 0 && (
           <span className="shrink-0 text-[11px] leading-none text-zinc-400 dark:text-zinc-500">
             {formatCost(task.estimated_cost_usd)}
+          </span>
+        )}
+        {task.depends_on_task_id && (
+          <span
+            title={dependencyTitle ? `Waiting on "${dependencyTitle}"` : 'Waiting'}
+            className="inline-flex h-5 max-w-[68%] shrink-0 items-center gap-1.5 rounded-md border border-zinc-200 bg-zinc-50 px-1.5 text-[11px] font-medium leading-none text-zinc-400 dark:border-zinc-700 dark:bg-zinc-800/70 dark:text-zinc-500"
+          >
+            <Clock size={12} strokeWidth={2.5} className="shrink-0" />
+            <span className="min-w-0 truncate">
+              {dependencyTitle ? `Waiting on ${dependencyTitle}` : 'Waiting'}
+            </span>
           </span>
         )}
         {isGoalRun && (

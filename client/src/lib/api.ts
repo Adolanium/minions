@@ -106,11 +106,17 @@ export function markTaskViewed(id: string) {
 export function createTask(
   description: string,
   title?: string,
+  dependsOnTaskId?: string,
+  pendingPrompt?: string,
 ) {
   return request<{ task: Task }>('/tasks', {
     method: 'POST',
-    body: JSON.stringify({ description, title }),
+    body: JSON.stringify({ description, title, dependsOnTaskId, pendingPrompt }),
   });
+}
+
+export function startTaskNow(id: string) {
+  return request<{ ok: boolean }>(`/tasks/${id}/start-now`, { method: 'POST' });
 }
 
 export function fetchMessages(taskId: string) {

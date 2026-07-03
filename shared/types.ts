@@ -31,6 +31,8 @@ export interface Task {
   agent_provider: string | null;
   reasoning_effort: ReasoningEffort | null;
   toolsets: string[] | null;
+  depends_on_task_id: string | null;
+  pending_prompt: string | null;
   created_at: number;
   updated_at: number;
   last_agent_response_at: number | null;

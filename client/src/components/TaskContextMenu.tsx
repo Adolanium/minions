@@ -1,14 +1,14 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
-import { Archive, Trash2 } from 'lucide-react';
+import { Archive, Play, Trash2 } from 'lucide-react';
 import type { Task, TaskStatus } from '@shared/types';
 import { TASK_STATUSES } from '@shared/types';
 import { STATUS_META } from '../lib/constants';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { StatusIcon } from './StatusIcon';
 import { useStore, optimisticMoveTask } from '../lib/store';
-import { moveTask, deleteTask } from '../lib/api';
+import { moveTask, deleteTask, startTaskNow } from '../lib/api';
 
 interface Props {
   task: Task;
@@ -82,7 +82,15 @@ export function TaskContextMenu({ task, x, y, onClose }: Props) {
     } catch {}
   }
 
+  async function handleStartNow() {
+    onClose();
+    try {
+      await startTaskNow(task.id);
+    } catch {}
+  }
+
   const otherStatuses = TASK_STATUSES.filter((s) => s !== task.status);
+  const isWaiting = !!task.depends_on_task_id;
 
   return createPortal(
     <>
@@ -92,6 +100,20 @@ export function TaskContextMenu({ task, x, y, onClose }: Props) {
         style={{ left: pos.x, top: pos.y }}
         className="fixed z-50 min-w-[200px] py-1 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-700 shadow-xl animate-in fade-in zoom-in-95 duration-100"
       >
+        {isWaiting && (
+          <>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={handleStartNow}
+              className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-left"
+            >
+              <Play size={14} />
+              Start now
+            </button>
+            <div className="my-1 border-t border-zinc-200 dark:border-zinc-800" />
+          </>
+        )}
         <p className="px-3 py-1.5 text-[11px] font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
           Move to
         </p>
