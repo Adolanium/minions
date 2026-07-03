@@ -442,6 +442,158 @@ def _memory_paths() -> dict[str, Any]:
     }
 
 
+# Auxiliary model slots Hermes can route to a dedicated model. Labels/descriptions
+# are ours; the keys match Hermes' config.yaml `auxiliary.<key>` sections.
+AUX_MODEL_SLOTS = (
+    ("title_generation", "Title generation", "Names new tasks from the first message."),
+    ("compression", "Context compression", "Summarizes long conversations to free up context."),
+    ("vision", "Vision", "Reads images and screenshots."),
+    ("web_extract", "Web extract", "Pulls readable content out of fetched web pages."),
+    ("skills_hub", "Skills hub", "Powers skill search and installation."),
+    ("approval", "Command approval", "Judges whether a shell command is safe to run."),
+    ("mcp", "MCP", "Handles Model Context Protocol tool calls."),
+    ("triage_specifier", "Triage specifier", "Turns a request into a concrete task spec."),
+    ("kanban_decomposer", "Kanban decomposer", "Splits a board task into subtasks."),
+    ("profile_describer", "Profile describer", "Writes short descriptions for profiles."),
+    ("curator", "Curator", "Maintains sessions and skills in the background."),
+)
+_AUX_MODEL_SLOT_KEYS = frozenset(key for key, _, _ in AUX_MODEL_SLOTS)
+
+
+def _positive_int_or_none(value: Any) -> int | None:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
+
+
+def _collect_model_metadata(model: str, provider: str | None, base_url: str | None) -> dict[str, Any]:
+    """Best-effort capability + pricing lookup. Runs in a worker thread so the
+    caller can bound it with a timeout; every lookup degrades to None on failure."""
+    capabilities: dict[str, Any] | None = None
+    pricing: dict[str, Any] | None = None
+    try:
+        from agent.models_dev import get_model_capabilities
+        mc = get_model_capabilities(provider=provider or "", model=model or "")
+        if mc is not None:
+            capabilities = {
+                "supportsTools": bool(getattr(mc, "supports_tools", False)),
+                "supportsVision": bool(getattr(mc, "supports_vision", False)),
+                "supportsReasoning": bool(getattr(mc, "supports_reasoning", False)),
+                "contextWindow": _positive_int_or_none(getattr(mc, "context_window", None)),
+                "maxOutputTokens": _positive_int_or_none(getattr(mc, "max_output_tokens", None)),
+                "modelFamily": string_or_none(getattr(mc, "model_family", None)),
+            }
+    except Exception:
+        pass
+    try:
+        from agent.usage_pricing import get_pricing_entry
+        entry = get_pricing_entry(model or "", provider=provider or None, base_url=base_url or None)
+        if entry is not None:
+            inp = getattr(entry, "input_cost_per_million", None)
+            out = getattr(entry, "output_cost_per_million", None)
+            cache = getattr(entry, "cache_read_cost_per_million", None)
+            if inp is not None or out is not None:
+                pricing = {
+                    "inputPerMillion": float(inp) if inp is not None else None,
+                    "outputPerMillion": float(out) if out is not None else None,
+                    "cacheReadPerMillion": float(cache) if cache is not None else None,
+                    "source": string_or_none(getattr(entry, "source", None)),
+                }
+    except Exception:
+        pass
+    return {"capabilities": capabilities, "pricing": pricing}
+
+
+def _model_info() -> dict[str, Any]:
+    _ensure_imports()
+    cfg = _load_config()
+    model_cfg = _model_section(cfg)
+    model = string_or_none(model_cfg.get("default"))
+    provider = string_or_none(model_cfg.get("provider"))
+    base_url = string_or_none(model_cfg.get("base_url"))
+
+    meta: dict[str, Any] = {"capabilities": None, "pricing": None}
+    if model:
+        try:
+            meta = _MODEL_EXECUTOR.submit(_collect_model_metadata, model, provider, base_url).result(timeout=8.0)
+        except Exception:
+            meta = {"capabilities": None, "pricing": None}
+
+    return {
+        "model": model,
+        "provider": provider,
+        "baseUrl": base_url,
+        "capabilities": meta.get("capabilities"),
+        "pricing": meta.get("pricing"),
+    }
+
+
+def _auxiliary_models() -> dict[str, Any]:
+    cfg = _load_config()
+    aux = cfg.get("auxiliary")
+    aux = aux if isinstance(aux, dict) else {}
+    main = _model_section(cfg)
+    slots: list[dict[str, Any]] = []
+    for key, label, description in AUX_MODEL_SLOTS:
+        slot_cfg = aux.get(key)
+        slot_cfg = slot_cfg if isinstance(slot_cfg, dict) else {}
+        model = string_or_none(slot_cfg.get("model"))
+        is_auto = not model
+        slots.append({
+            "key": key,
+            "label": label,
+            "description": description,
+            "provider": None if is_auto else string_or_none(slot_cfg.get("provider")),
+            "model": None if is_auto else model,
+            "isAuto": is_auto,
+        })
+    return {
+        "main": {
+            "provider": string_or_none(main.get("provider")),
+            "model": string_or_none(main.get("default")),
+        },
+        "slots": slots,
+    }
+
+
+def _set_auxiliary_model(request: dict[str, Any]) -> dict[str, Any]:
+    global _CONFIG_CACHE
+    slot_key = string_or_none(request.get("slot"))
+    if not slot_key or slot_key not in _AUX_MODEL_SLOT_KEYS:
+        raise WorkerError("Unknown auxiliary model slot.", code="bad_request")
+
+    _ensure_imports()
+    from hermes_cli.config import load_config as _load_full_config, save_config
+
+    model = string_or_none(request.get("model"))
+    provider = string_or_none(request.get("provider"))
+
+    cfg = _load_full_config()
+    aux = cfg.get("auxiliary")
+    if not isinstance(aux, dict):
+        aux = {}
+        cfg["auxiliary"] = aux
+    slot = aux.get(slot_key)
+    if not isinstance(slot, dict):
+        slot = {}
+        aux[slot_key] = slot
+
+    if model:
+        slot["provider"] = provider or "auto"
+        slot["model"] = model
+    else:
+        # Reset to auto, which falls back to the main model.
+        slot["provider"] = "auto"
+        slot["model"] = ""
+
+    save_config(cfg)
+    _CONFIG_CACHE = None
+    _clear_model_list_cache()
+    return _auxiliary_models()
+
+
 def _defaults_from_config(cfg: dict[str, Any] | None = None) -> dict[str, Any]:
     cfg = cfg if cfg is not None else _load_config()
     model_cfg = _model_section(cfg)
@@ -1650,6 +1802,12 @@ def _handle_request(request: dict[str, Any]) -> None:
             _result(request_id, _memory_paths())
         elif request_type == "insights.get":
             _result(request_id, insights_report(request.get("days")))
+        elif request_type == "models.info":
+            _result(request_id, _model_info())
+        elif request_type == "models.auxiliary.get":
+            _result(request_id, _auxiliary_models())
+        elif request_type == "models.auxiliary.set":
+            _result(request_id, _set_auxiliary_model(request))
         elif request_type == "scheduledTasks.list":
             _result(request_id, list_scheduled_tasks(bool(request.get("includeDisabled")), request.get("limit")))
         elif request_type == "scheduledTasks.get":

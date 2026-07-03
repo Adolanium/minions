@@ -2,7 +2,9 @@ import type {
   AgentRunSettings,
   AgentToolsetsResponse,
   AnalyticsReport,
+  AuxiliaryModelsResponse,
   CompactResult,
+  ModelInfoResponse,
   ContextUsage,
   GoalDecision,
   GoalStateSnapshot,
@@ -66,6 +68,12 @@ export interface AgentAdapter {
   getMemoryPaths(): Promise<{ hermesHome: string; files: MemoryPathEntry[] }>;
 
   getInsights(days?: number): Promise<AnalyticsReport>;
+
+  getModelInfo(): Promise<ModelInfoResponse>;
+
+  getAuxiliaryModels(): Promise<AuxiliaryModelsResponse>;
+
+  setAuxiliaryModel(slot: string, model: string | null, provider: string | null): Promise<AuxiliaryModelsResponse>;
 
   getSessionMetadata(sessionId: string): Promise<SessionMetadata | null>;
 

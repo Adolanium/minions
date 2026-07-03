@@ -9,7 +9,9 @@ import type {
   AgentModelsResponse,
   AgentToolsetsResponse,
   AnalyticsReport,
+  AuxiliaryModelsResponse,
   CompactResult,
+  ModelInfoResponse,
   GoalDecision,
   GoalStateSnapshot,
   MemoryPathEntry,
@@ -609,6 +611,18 @@ export class HermesWorkerAdapter implements AgentAdapter {
 
   async getInsights(days = 30): Promise<AnalyticsReport> {
     return await this.client.request<AnalyticsReport>({ type: 'insights.get', days });
+  }
+
+  async getModelInfo(): Promise<ModelInfoResponse> {
+    return await this.client.request<ModelInfoResponse>('models.info');
+  }
+
+  async getAuxiliaryModels(): Promise<AuxiliaryModelsResponse> {
+    return await this.client.request<AuxiliaryModelsResponse>('models.auxiliary.get');
+  }
+
+  async setAuxiliaryModel(slot: string, model: string | null, provider: string | null): Promise<AuxiliaryModelsResponse> {
+    return await this.client.request<AuxiliaryModelsResponse>({ type: 'models.auxiliary.set', slot, model, provider });
   }
 
   async listScheduledTasks(includeDisabled = false, limit = 100): Promise<ScheduledTask[]> {

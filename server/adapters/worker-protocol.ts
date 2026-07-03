@@ -3,7 +3,9 @@ import type {
   AgentModelsResponse,
   AgentToolsetsResponse,
   AnalyticsReport,
+  AuxiliaryModelsResponse,
   GoalDecision,
+  ModelInfoResponse,
   GoalStateSnapshot,
   MemoryPathEntry,
   ScheduledTask,
@@ -24,6 +26,9 @@ export type WorkerRequest =
   | { id: string; type: 'toolsets.list' }
   | { id: string; type: 'paths.get' }
   | { id: string; type: 'insights.get'; days?: number }
+  | { id: string; type: 'models.info' }
+  | { id: string; type: 'models.auxiliary.get' }
+  | { id: string; type: 'models.auxiliary.set'; slot: string; model?: string | null; provider?: string | null }
   | { id: string; type: 'scheduledTasks.list'; includeDisabled?: boolean; limit?: number }
   | { id: string; type: 'scheduledTasks.get'; scheduledTaskId: string }
   | { id: string; type: 'scheduledTasks.create' } & ScheduledTaskInput
@@ -82,6 +87,8 @@ export type WorkerResult =
   | AgentToolsetsResponse
   | { hermesHome: string; files: MemoryPathEntry[] }
   | AnalyticsReport
+  | ModelInfoResponse
+  | AuxiliaryModelsResponse
   | { scheduledTasks: ScheduledTask[] }
   | { scheduledTask: ScheduledTask | null }
   | { executed: number }
