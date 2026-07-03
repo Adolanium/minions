@@ -196,6 +196,12 @@ export interface AnalyticsReport {
   byDayOfWeek: { day: string; count: number }[];
 }
 
+export interface GitStatusResponse {
+  repo: boolean;
+  branch?: string;
+  dirtyCount?: number;
+}
+
 export interface MemoryPathEntry {
   key: string;
   label: string;

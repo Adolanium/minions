@@ -1,4 +1,5 @@
 import { constants, mkdirSync } from 'node:fs';
+import { execFile } from 'node:child_process';
 import type { Dirent, Stats } from 'node:fs';
 import {
   access,
@@ -98,6 +99,49 @@ filesRouter.get('/list', async (req, res) => {
     });
   } catch (error) {
     sendFileError(res, error, 'Failed to list directory');
+  }
+});
+
+const GIT_TIMEOUT_MS = 4000;
+
+function git(args: string[], cwd: string): Promise<string> {
+  return new Promise((resolvePromise, rejectPromise) => {
+    execFile('git', args, { cwd, timeout: GIT_TIMEOUT_MS, windowsHide: true }, (error, stdout) => {
+      if (error) rejectPromise(error);
+      else resolvePromise(stdout.toString());
+    });
+  });
+}
+
+filesRouter.get('/git-status', async (req, res) => {
+  try {
+    const directoryPath = resolveRequiredPath(req.query.path);
+    const directoryStats = await stat(directoryPath);
+    if (!directoryStats.isDirectory()) {
+      res.json({ repo: false });
+      return;
+    }
+
+    let branch: string;
+    try {
+      branch = (await git(['rev-parse', '--abbrev-ref', 'HEAD'], directoryPath)).trim();
+    } catch {
+      // Not a repository, git missing, or timed out — all mean "no badge".
+      res.json({ repo: false });
+      return;
+    }
+
+    let dirtyCount = 0;
+    try {
+      const porcelain = await git(['status', '--porcelain'], directoryPath);
+      dirtyCount = porcelain.split('\n').filter((line) => line.trim()).length;
+    } catch {
+      // Branch resolved but status failed; still worth showing the branch.
+    }
+
+    res.json({ repo: true, branch, dirtyCount });
+  } catch (error) {
+    sendFileError(res, error, 'Failed to read git status');
   }
 });
 

@@ -20,6 +20,7 @@ import type {
   FileRenameResponse,
   FileUploadResponse,
   FileWriteResponse,
+  GitStatusResponse,
   MemoryFilesResponse,
   MemorySaveResponse,
   ContextUsage,
@@ -283,6 +284,10 @@ export function listFiles(path = WORKSPACE_ROOT) {
 
 export function readFile(path: string) {
   return request<FileReadResponse>(`/files/read?path=${encodeURIComponent(path)}`);
+}
+
+export function fetchGitStatus(path: string) {
+  return request<GitStatusResponse>(`/files/git-status?path=${encodeURIComponent(path)}`);
 }
 
 export function fileDownloadUrl(path: string) {
