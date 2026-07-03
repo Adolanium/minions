@@ -2,6 +2,7 @@ import express from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import cors from 'cors';
 import { tasksRouter } from './routes/tasks.js';
+import { templatesRouter } from './routes/templates.js';
 import { chatRouter } from './routes/chat.js';
 import { createAgentRouter, createTaskAgentSettingsRouter } from './routes/agent.js';
 import { createScheduledTasksRouter } from './routes/scheduled-tasks.js';
@@ -49,6 +50,7 @@ app.use('/api/agent', createAgentRouter(adapter));
 app.use('/api/scheduled-tasks', createScheduledTasksRouter(adapter));
 app.use('/api/search', createSearchRouter(adapter));
 app.use('/api/skills', skillsRouter);
+app.use('/api/templates', templatesRouter);
 app.use('/api/notifications', notificationsRouter);
 
 app.use((error: unknown, _req: Request, res: Response, next: NextFunction) => {
