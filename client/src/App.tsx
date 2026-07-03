@@ -13,6 +13,7 @@ import { MemoryPage } from './components/MemoryPage';
 import { AnalyticsPage } from './components/AnalyticsPage';
 import { ModelsPage } from './components/ModelsPage';
 import { McpPage } from './components/McpPage';
+import { LogsPage } from './components/LogsPage';
 import { SearchPalette } from './components/SearchPalette';
 import { Toaster } from 'sonner';
 import { useTasks } from './hooks/useTasks';
@@ -54,6 +55,7 @@ function AppShell() {
               <Route path="/analytics" element={<AnalyticsPage />} />
               <Route path="/models" element={<ModelsPage />} />
               <Route path="/mcp" element={<McpPage />} />
+              <Route path="/logs" element={<LogsPage />} />
               <Route path="/archive" element={<ArchivePage />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Routes>
