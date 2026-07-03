@@ -30,12 +30,14 @@ function buildTaskSettings(task: Task, defaults: AgentDefaults): TaskAgentSettin
       model: overrides.model ?? null,
       provider: overrides.provider ?? null,
       reasoningEffort: overrides.reasoningEffort ?? null,
+      toolsets: overrides.toolsets ?? null,
     },
     defaults,
     effective: {
       model: overrides.model ?? defaults.model,
       provider: overrides.provider ?? defaults.provider,
       reasoningEffort: overrides.reasoningEffort ?? defaults.reasoningEffort,
+      toolsets: overrides.toolsets ?? null,
     },
   };
 }
@@ -93,6 +95,14 @@ export function createAgentRouter(adapter: HermesWorkerAdapter): Router {
   router.get('/models', async (_req, res) => {
     try {
       res.json(await adapter.getModels());
+    } catch (error) {
+      res.status(503).json({ error: toErrorMessage(error, 'Hermes worker unavailable') });
+    }
+  });
+
+  router.get('/toolsets', async (_req, res) => {
+    try {
+      res.json(await adapter.listToolsets());
     } catch (error) {
       res.status(503).json({ error: toErrorMessage(error, 'Hermes worker unavailable') });
     }

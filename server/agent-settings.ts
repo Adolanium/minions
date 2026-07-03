@@ -6,6 +6,7 @@ export interface AgentSettingsUpdate {
   agent_model?: string | null;
   agent_provider?: string | null;
   reasoning_effort?: ReasoningEffort | null;
+  toolsets?: string[] | null;
 }
 
 export interface ParsedRunSettings {
@@ -49,16 +50,28 @@ function normalizeReasoningEffort(value: unknown): ReasoningEffort | null | unde
   return value as ReasoningEffort;
 }
 
+function normalizeToolsets(value: unknown): string[] | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  if (!Array.isArray(value) || !value.every((entry) => typeof entry === 'string')) {
+    throw new Error('toolsets must be an array of strings or null');
+  }
+  const cleaned = value.map((entry) => entry.trim()).filter(Boolean);
+  return cleaned.length > 0 ? cleaned : null;
+}
+
 function parseSettingsFields(body: unknown): AgentSettingsUpdate {
   const record = isRecord(body) ? body : {};
   const model = normalizeModel(firstPresent(record, ['agentModel', 'agent_model', 'model']));
   const provider = normalizeProvider(firstPresent(record, ['agentProvider', 'agent_provider', 'provider']));
   const reasoningEffort = normalizeReasoningEffort(firstPresent(record, ['reasoningEffort', 'reasoning_effort']));
+  const toolsets = normalizeToolsets(firstPresent(record, ['toolsets']));
 
   return {
     ...(model !== undefined ? { agent_model: model } : {}),
     ...(provider !== undefined ? { agent_provider: provider } : {}),
     ...(reasoningEffort !== undefined ? { reasoning_effort: reasoningEffort } : {}),
+    ...(toolsets !== undefined ? { toolsets } : {}),
   };
 }
 
@@ -67,6 +80,7 @@ export function taskRunSettings(task: Task): AgentRunSettings {
     model: task.agent_model,
     provider: task.agent_provider,
     reasoningEffort: task.reasoning_effort,
+    toolsets: task.toolsets,
   };
 }
 

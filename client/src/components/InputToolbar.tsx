@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, ChevronDown, Loader2, Search, Sparkles, Target, Zap, type LucideIcon } from 'lucide-react';
+import { Check, ChevronDown, Loader2, Search, Sparkles, Target, Wrench, Zap, type LucideIcon } from 'lucide-react';
 import { MINIONS_GOAL_MAX_TURNS, REASONING_EFFORTS, type AgentDefaults, type AgentModelGroup, type ChatRunMode, type ContextUsage, type ReasoningEffort, type SessionMetadata } from '@shared/types';
 import { fetchSession } from '../lib/api';
 import { formatCost, formatTokenCount } from '../lib/format';
@@ -975,6 +975,119 @@ export function ModelPicker({
   );
 }
 
+function formatToolsetLabel(name: string): string {
+  return name
+    .replace(/^hermes-/, '')
+    .replace(/[-_]/g, ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+interface ToolsetsPickerProps {
+  value: string[] | null;
+  options: string[];
+  defaultToolsets?: string[];
+  disabled?: boolean;
+  compactMobile?: boolean;
+  onChange: (value: string[] | null) => void;
+}
+
+function ToolsetsPicker({
+  value,
+  options,
+  defaultToolsets = [],
+  disabled = false,
+  compactMobile = false,
+  onChange,
+}: ToolsetsPickerProps) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const count = value?.length ?? 0;
+  const label = count > 0 ? `Tools (${count})` : 'Tools';
+
+  useEffect(() => {
+    if (!open) return;
+
+    function handlePointerDown(event: MouseEvent) {
+      if (containerRef.current?.contains(event.target as Node)) return;
+      setOpen(false);
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown, { passive: true });
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open]);
+
+  function toggle(name: string) {
+    const current = value ?? [];
+    const next = current.includes(name) ? current.filter((entry) => entry !== name) : [...current, name];
+    onChange(next.length > 0 ? next : null);
+  }
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        disabled={disabled}
+        title={count > 0 ? `Tools: ${(value ?? []).join(', ')}` : 'Using default toolsets'}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+        className={`inline-flex h-9 min-w-0 max-w-full items-center gap-1.5 rounded-lg border border-zinc-200 bg-white text-xs font-medium text-zinc-600 shadow-sm transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700/70 ${
+          compactMobile ? 'w-9 justify-center px-0 sm:w-auto sm:justify-start sm:px-2.5' : 'px-2.5'
+        }`}
+      >
+        <Wrench size={12} className="shrink-0" />
+        <span className={compactMobile ? 'sr-only sm:not-sr-only' : undefined}>{label}</span>
+      </button>
+
+      {open && (
+        <div className="absolute bottom-full left-0 z-50 mb-2.5 w-64 rounded-xl border border-zinc-200 bg-white py-1.5 shadow-xl outline-none dark:border-zinc-700 dark:bg-zinc-900">
+          <div className="max-h-64 overflow-y-auto">
+            <button
+              type="button"
+              onClick={() => onChange(null)}
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            >
+              <Check size={14} className={`shrink-0 ${value === null ? 'opacity-100' : 'opacity-0'}`} />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-medium">Default</span>
+                <span className="block truncate text-xs text-zinc-400 dark:text-zinc-500">
+                  Uses the current Hermes defaults{defaultToolsets.length > 0 ? ` (${defaultToolsets.length})` : ''}
+                </span>
+              </span>
+            </button>
+            <div className="my-1 border-t border-zinc-100 dark:border-zinc-800" />
+            {options.map((name) => {
+              const selected = value?.includes(name) ?? false;
+              return (
+                <button
+                  key={name}
+                  type="button"
+                  onClick={() => toggle(name)}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                >
+                  <Check size={14} className={`shrink-0 ${selected ? 'opacity-100' : 'opacity-0'}`} />
+                  <span className="min-w-0 flex-1 truncate">{formatToolsetLabel(name)}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface InputToolbarProps {
   model: string | null;
   provider?: string | null;
@@ -982,10 +1095,14 @@ interface InputToolbarProps {
   runMode?: ChatRunMode;
   defaults?: AgentDefaults | null;
   modelGroups?: AgentModelGroup[];
+  toolsets?: string[] | null;
+  toolsetOptions?: string[];
+  defaultToolsets?: string[];
   disabled?: boolean;
   compactMobile?: boolean;
   onModelChange: (model: string | null, provider?: string | null) => void;
   onReasoningEffortChange: (effort: ReasoningEffort | null) => void;
+  onToolsetsChange?: (toolsets: string[] | null) => void;
   onRunModeChange?: (mode: ChatRunMode) => void;
 }
 
@@ -1075,10 +1192,14 @@ export function InputToolbar({
   runMode,
   defaults,
   modelGroups = [],
+  toolsets = null,
+  toolsetOptions = [],
+  defaultToolsets = [],
   disabled = false,
   compactMobile = false,
   onModelChange,
   onReasoningEffortChange,
+  onToolsetsChange,
   onRunModeChange,
 }: InputToolbarProps) {
   const defaultModel = defaults?.model ?? null;
@@ -1118,6 +1239,17 @@ export function InputToolbar({
         minMenuWidth={180}
         onChange={(nextReasoning) => onReasoningEffortChange(nextReasoning as ReasoningEffort)}
       />
+
+      {onToolsetsChange && toolsetOptions.length > 0 && (
+        <ToolsetsPicker
+          value={toolsets}
+          options={toolsetOptions}
+          defaultToolsets={defaultToolsets}
+          disabled={disabled}
+          compactMobile={compactMobile}
+          onChange={onToolsetsChange}
+        />
+      )}
 
       {runMode && onRunModeChange && (
         <GoalModeToggle

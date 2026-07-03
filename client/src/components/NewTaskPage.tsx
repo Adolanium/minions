@@ -28,7 +28,21 @@ export function NewTaskPage() {
   const [input, setInput] = useState(initialDraftRef.current);
   const [runMode, setRunMode] = useState<ChatRunMode>('task');
   const [isCreating, setIsCreating] = useState(false);
-  const { defaults, modelGroups, model, setModel, provider, setProvider, reasoningEffort, setReasoningEffort, isLoading } = useAgentConfig();
+  const {
+    defaults,
+    modelGroups,
+    toolsetOptions,
+    defaultToolsets,
+    model,
+    setModel,
+    provider,
+    setProvider,
+    reasoningEffort,
+    setReasoningEffort,
+    toolsets,
+    setToolsets,
+    isLoading,
+  } = useAgentConfig();
   const uploadBucketRef = useRef<string | null>(null);
   if (uploadBucketRef.current === null) uploadBucketRef.current = `draft-${crypto.randomUUID()}`;
   const uploadBucketId = uploadBucketRef.current;
@@ -84,14 +98,14 @@ export function NewTaskPage() {
       navigate(`/tasks/${task.id}`, {
         state: {
           initialMessage,
-          initialSettings: { model, provider, reasoningEffort, mode: runMode },
+          initialSettings: { model, provider, reasoningEffort, toolsets, mode: runMode },
         },
       });
     } catch (err) {
       setUploadError(toErrorMessage(err, 'Failed to create task'));
       setIsCreating(false);
     }
-  }, [defaults, uploadBlocksSend, input, isCreating, isLoading, model, provider, navigate, pendingFiles, reasoningEffort, runMode, submitWithAttachments, setUploadError]);
+  }, [defaults, uploadBlocksSend, input, isCreating, isLoading, model, provider, navigate, pendingFiles, reasoningEffort, toolsets, runMode, submitWithAttachments, setUploadError]);
 
   const handleToggleGoalMode = useCallback(() => setRunMode(toggleRunMode), []);
 
@@ -150,6 +164,9 @@ export function NewTaskPage() {
                 runMode={runMode}
                 defaults={defaults}
                 modelGroups={modelGroups}
+                toolsets={toolsets}
+                toolsetOptions={toolsetOptions}
+                defaultToolsets={defaultToolsets}
                 disabled={isCreating}
                 compactMobile
                 onModelChange={(nextModel, nextProvider) => {
@@ -157,6 +174,7 @@ export function NewTaskPage() {
                   setProvider(nextProvider ?? null);
                 }}
                 onReasoningEffortChange={setReasoningEffort}
+                onToolsetsChange={setToolsets}
                 onRunModeChange={setRunMode}
               />
             </div>

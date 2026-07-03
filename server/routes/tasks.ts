@@ -70,7 +70,7 @@ tasksRouter.post('/', (req, res) => {
 });
 
 tasksRouter.patch('/:id', (req, res) => {
-  const allowed = ['title', 'description', 'status'] as const;
+  const allowed = ['title', 'description', 'status', 'toolsets'] as const;
   const fields: Record<string, unknown> = {};
   for (const key of allowed) {
     if (req.body[key] !== undefined) fields[key] = req.body[key];
@@ -78,6 +78,13 @@ tasksRouter.patch('/:id', (req, res) => {
 
   if (fields.status && !ALL_TASK_STATUSES.includes(fields.status as TaskStatus)) {
     return res.status(400).json({ error: `status must be one of: ${ALL_TASK_STATUSES.join(', ')}` });
+  }
+
+  if (fields.toolsets !== undefined) {
+    const toolsets = fields.toolsets;
+    if (toolsets !== null && (!Array.isArray(toolsets) || !toolsets.every((entry) => typeof entry === 'string'))) {
+      return res.status(400).json({ error: 'toolsets must be an array of strings or null' });
+    }
   }
 
   const updated = updateTask(req.params.id, fields);

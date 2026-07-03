@@ -363,10 +363,21 @@ export function TaskChat({ taskId, initialMessage, initialSettings }: TaskChatPr
   if (startupRef.current.taskId !== taskId) {
     startupRef.current = { taskId, initialMessage, initialSettings };
   }
-  const { defaults, modelGroups, model, setModel, provider, setProvider, reasoningEffort, setReasoningEffort, isLoading } = useAgentConfig(
-    taskId,
-    startupRef.current.initialSettings,
-  );
+  const {
+    defaults,
+    modelGroups,
+    toolsetOptions,
+    defaultToolsets,
+    model,
+    setModel,
+    provider,
+    setProvider,
+    reasoningEffort,
+    setReasoningEffort,
+    toolsets,
+    setToolsets,
+    isLoading,
+  } = useAgentConfig(taskId, startupRef.current.initialSettings);
   const waitingForTaskSettings = isLoading && !startupRef.current.initialSettings;
   const toolbarDefaults = waitingForTaskSettings ? null : defaults;
   const configPending = waitingForTaskSettings || (!defaults && isLoading);
@@ -541,7 +552,7 @@ export function TaskChat({ taskId, initialMessage, initialSettings }: TaskChatPr
 
     const messageText = submitWithAttachments(text);
 
-    const settings = { model, provider, reasoningEffort, mode: isGoalStreaming ? 'task' : runMode };
+    const settings = { model, provider, reasoningEffort, toolsets, mode: isGoalStreaming ? 'task' : runMode };
     if (taskBusyForQueue) {
       setQueuedMessage({
         id: crypto.randomUUID(),
@@ -792,6 +803,9 @@ export function TaskChat({ taskId, initialMessage, initialSettings }: TaskChatPr
                 runMode={runMode}
                 defaults={toolbarDefaults}
                 modelGroups={modelGroups}
+                toolsets={toolsets}
+                toolsetOptions={toolsetOptions}
+                defaultToolsets={defaultToolsets}
                 disabled={goalToggleDisabled}
                 compactMobile
                 onModelChange={(nextModel, nextProvider) => {
@@ -799,6 +813,7 @@ export function TaskChat({ taskId, initialMessage, initialSettings }: TaskChatPr
                   setProvider(nextProvider ?? null);
                 }}
                 onReasoningEffortChange={setReasoningEffort}
+                onToolsetsChange={setToolsets}
                 onRunModeChange={setRunMode}
               />
             </div>

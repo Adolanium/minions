@@ -359,7 +359,7 @@ chatRouter.post('/:id/messages', async (req, res) => {
   }
 
   let runTask = task;
-  const taskUpdates: Partial<Pick<Task, 'status' | 'agent_model' | 'agent_provider' | 'reasoning_effort'>> = {};
+  const taskUpdates: Partial<Pick<Task, 'status' | 'agent_model' | 'agent_provider' | 'reasoning_effort' | 'toolsets'>> = {};
   if (runSettings.hasFields) {
     const { taskFields } = runSettings;
     if (taskFields.agent_model !== undefined && taskFields.agent_model !== task.agent_model) {
@@ -370,6 +370,9 @@ chatRouter.post('/:id/messages', async (req, res) => {
     }
     if (taskFields.reasoning_effort !== undefined && taskFields.reasoning_effort !== task.reasoning_effort) {
       taskUpdates.reasoning_effort = taskFields.reasoning_effort;
+    }
+    if (taskFields.toolsets !== undefined) {
+      taskUpdates.toolsets = taskFields.toolsets;
     }
   }
   if (task.status === 'in_review' || task.status === 'done' || task.status === 'archived') {

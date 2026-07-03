@@ -882,6 +882,16 @@ def _resolve_toolsets(cfg: dict[str, Any]) -> list[str] | None:
     return None
 
 
+def _list_toolsets() -> dict[str, Any]:
+    _ensure_imports()
+    import toolsets as hermes_toolsets
+
+    cfg = _load_config()
+    default_toolsets = sorted(_resolve_toolsets(cfg) or [])
+    names = sorted(hermes_toolsets.get_toolset_names())
+    return {"toolsets": names, "defaultToolsets": default_toolsets}
+
+
 def _normalize_fallback_entry(raw: Any) -> dict[str, Any] | None:
     if not isinstance(raw, dict):
         return None
@@ -934,6 +944,7 @@ def _create_agent(
     reasoning_effort: str | None,
     requested_provider: str | None = None,
     callbacks: dict[str, Any] | None = None,
+    enabled_toolsets: list[str] | None = None,
 ) -> Any:
     _ensure_imports()
     cfg = _load_config()
@@ -988,7 +999,7 @@ def _create_agent(
         "platform": "minions",
         "session_id": session_id,
         "session_db": session_db,
-        "enabled_toolsets": _resolve_toolsets(cfg),
+        "enabled_toolsets": enabled_toolsets if enabled_toolsets else _resolve_toolsets(cfg),
         "fallback_model": _fallback_model(cfg),
         "clarify_callback": clarify_callback,
     }
@@ -1218,6 +1229,12 @@ def _run_chat(request_id: str, request: dict[str, Any]) -> None:
     requested_model = string_or_none(settings.get("model"))
     requested_provider = string_or_none(settings.get("provider"))
     requested_effort = _normalize_reasoning(settings.get("reasoningEffort"))
+    requested_toolsets = settings.get("toolsets")
+    toolsets_override = None
+    if isinstance(requested_toolsets, list):
+        cleaned = [t.strip() for t in requested_toolsets if isinstance(t, str) and t.strip()]
+        if cleaned:
+            toolsets_override = cleaned
 
     session_id = string_or_none(request.get("sessionId")) or request_id
     message = request.get("message")
@@ -1302,6 +1319,7 @@ def _run_chat(request_id: str, request: dict[str, Any]) -> None:
         requested_model=requested_model,
         requested_provider=requested_provider,
         reasoning_effort=requested_effort,
+        enabled_toolsets=toolsets_override,
         callbacks={
             "stream_delta_callback": on_text_delta,
             "reasoning_callback": on_reasoning_delta,
@@ -1603,6 +1621,8 @@ def _handle_request(request: dict[str, Any]) -> None:
             _result(request_id, _set_defaults(request))
         elif request_type == "models.list":
             _result(request_id, _list_models())
+        elif request_type == "toolsets.list":
+            _result(request_id, _list_toolsets())
         elif request_type == "scheduledTasks.list":
             _result(request_id, list_scheduled_tasks(bool(request.get("includeDisabled")), request.get("limit")))
         elif request_type == "scheduledTasks.get":

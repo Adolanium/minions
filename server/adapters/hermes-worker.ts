@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 import type {
   AgentDefaults,
   AgentModelsResponse,
+  AgentToolsetsResponse,
   CompactResult,
   GoalDecision,
   GoalStateSnapshot,
@@ -594,6 +595,10 @@ export class HermesWorkerAdapter implements AgentAdapter {
 
   async getModels(): Promise<AgentModelsResponse> {
     return await this.client.request<AgentModelsResponse>('models.list');
+  }
+
+  async listToolsets(): Promise<AgentToolsetsResponse> {
+    return await this.client.request<AgentToolsetsResponse>('toolsets.list');
   }
 
   async listScheduledTasks(includeDisabled = false, limit = 100): Promise<ScheduledTask[]> {
