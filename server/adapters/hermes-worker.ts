@@ -11,6 +11,10 @@ import type {
   AnalyticsReport,
   AuxiliaryModelsResponse,
   CompactResult,
+  McpProbeResponse,
+  McpSaveResponse,
+  McpServerInput,
+  McpServersResponse,
   ModelInfoResponse,
   GoalDecision,
   GoalStateSnapshot,
@@ -623,6 +627,26 @@ export class HermesWorkerAdapter implements AgentAdapter {
 
   async setAuxiliaryModel(slot: string, model: string | null, provider: string | null): Promise<AuxiliaryModelsResponse> {
     return await this.client.request<AuxiliaryModelsResponse>({ type: 'models.auxiliary.set', slot, model, provider });
+  }
+
+  async listMcpServers(): Promise<McpServersResponse> {
+    return await this.client.request<McpServersResponse>('mcp.list');
+  }
+
+  async saveMcpServer(input: McpServerInput): Promise<McpSaveResponse> {
+    return await this.client.request<McpSaveResponse>({ type: 'mcp.save', ...input });
+  }
+
+  async removeMcpServer(name: string): Promise<McpServersResponse> {
+    return await this.client.request<McpServersResponse>({ type: 'mcp.remove', name });
+  }
+
+  async setMcpServerEnabled(name: string, enabled: boolean): Promise<McpServersResponse> {
+    return await this.client.request<McpServersResponse>({ type: 'mcp.setEnabled', name, enabled });
+  }
+
+  async probeMcpServer(name: string): Promise<McpProbeResponse> {
+    return await this.client.request<McpProbeResponse>({ type: 'mcp.probe', name });
   }
 
   async listScheduledTasks(includeDisabled = false, limit = 100): Promise<ScheduledTask[]> {

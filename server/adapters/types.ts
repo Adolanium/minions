@@ -4,6 +4,10 @@ import type {
   AnalyticsReport,
   AuxiliaryModelsResponse,
   CompactResult,
+  McpProbeResponse,
+  McpSaveResponse,
+  McpServerInput,
+  McpServersResponse,
   ModelInfoResponse,
   ContextUsage,
   GoalDecision,
@@ -74,6 +78,16 @@ export interface AgentAdapter {
   getAuxiliaryModels(): Promise<AuxiliaryModelsResponse>;
 
   setAuxiliaryModel(slot: string, model: string | null, provider: string | null): Promise<AuxiliaryModelsResponse>;
+
+  listMcpServers(): Promise<McpServersResponse>;
+
+  saveMcpServer(input: McpServerInput): Promise<McpSaveResponse>;
+
+  removeMcpServer(name: string): Promise<McpServersResponse>;
+
+  setMcpServerEnabled(name: string, enabled: boolean): Promise<McpServersResponse>;
+
+  probeMcpServer(name: string): Promise<McpProbeResponse>;
 
   getSessionMetadata(sessionId: string): Promise<SessionMetadata | null>;
 

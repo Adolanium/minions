@@ -321,6 +321,51 @@ export interface AuxiliaryModelsResponse {
   slots: AuxiliaryModelSlot[];
 }
 
+export type McpTransport = 'stdio' | 'remote';
+
+export interface McpServer {
+  name: string;
+  transport: McpTransport;
+  enabled: boolean;
+  command: string | null;
+  args: string[];
+  env: Record<string, string>;
+  url: string | null;
+  headers: Record<string, string>;
+  toolInclude: string[] | null;
+  toolExclude: string[] | null;
+}
+
+export interface McpServersResponse {
+  servers: McpServer[];
+}
+
+export interface McpSaveResponse {
+  ok: boolean;
+  warnings: string[];
+  servers: McpServer[];
+}
+
+export interface McpServerInput {
+  name: string;
+  transport: McpTransport;
+  enabled?: boolean;
+  command?: string | null;
+  args?: string[];
+  env?: Record<string, string>;
+  url?: string | null;
+  headers?: Record<string, string>;
+}
+
+export interface McpTool {
+  name: string;
+  description: string;
+}
+
+export interface McpProbeResponse {
+  tools: McpTool[];
+}
+
 export interface AgentToolsetsResponse {
   toolsets: string[];
   defaultToolsets: string[];
