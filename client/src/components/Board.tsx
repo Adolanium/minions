@@ -103,7 +103,10 @@ export function Board() {
   const grouped = useMemo(() => {
     const q = filter.trim().toLowerCase();
     const matchesFilter = (t: Task) =>
-      !q || t.title.toLowerCase().includes(q) || (t.description ?? '').toLowerCase().includes(q);
+      !q
+      || t.title.toLowerCase().includes(q)
+      || (t.description ?? '').toLowerCase().includes(q)
+      || (t.tags ?? []).some((tag) => tag.toLowerCase().includes(q));
     const buckets: Record<TaskStatus, Task[]> = { in_progress: [], in_review: [], done: [], archived: [] };
     for (const t of tasks) {
       if (t.status in buckets && matchesFilter(t)) buckets[t.status].push(t);

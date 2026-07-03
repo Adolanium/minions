@@ -8,6 +8,7 @@ import { isActiveRun, useStore } from '../lib/store';
 import { hasUnseenAgentResponse } from '../lib/taskState';
 import { TaskContextMenu } from './TaskContextMenu';
 import { RenameTitle } from './RenameTitle';
+import { TagChip } from './TaskTags';
 
 const BUSY_LABELS: Record<string, string> = { compact: 'Compacting...', goal: 'Working toward goal...' };
 
@@ -51,6 +52,16 @@ function TaskCardBody({ task, run }: { task: Task; run?: TaskRunState }) {
         >
           {task.description}
         </p>
+      )}
+      {task.tags && task.tags.length > 0 && (
+        <div className="mt-1.5 flex flex-wrap items-center gap-1">
+          {task.tags.slice(0, 3).map((tag) => (
+            <TagChip key={tag} tag={tag} />
+          ))}
+          {task.tags.length > 3 && (
+            <span className="text-[10px] font-medium text-zinc-400 dark:text-zinc-500">+{task.tags.length - 3}</span>
+          )}
+        </div>
       )}
       <div className="mt-3 -mr-[18px] flex min-w-0 items-center gap-2">
         <div className={`flex min-w-0 flex-1 items-center gap-1.5 text-[11px] leading-none ${timeRowClass}`}>

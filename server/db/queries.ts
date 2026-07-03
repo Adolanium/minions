@@ -44,7 +44,7 @@ const stmtMarkTaskViewed = db.prepare(`
     AND (last_viewed_at IS NULL OR last_viewed_at < last_agent_response_at)
 `);
 
-function parseToolsets(raw: unknown): string[] | null {
+function parseStringArray(raw: unknown): string[] | null {
   if (typeof raw !== 'string' || !raw) return null;
   try {
     const parsed = JSON.parse(raw);
@@ -54,13 +54,18 @@ function parseToolsets(raw: unknown): string[] | null {
   }
 }
 
-function serializeToolsets(value: string[] | null | undefined): string | null {
+function serializeStringArray(value: string[] | null | undefined): string | null {
   if (!value || value.length === 0) return null;
   return JSON.stringify(value);
 }
 
 function toTask(row: Record<string, unknown>): Task {
-  return { ...row, toolsets: parseToolsets(row.toolsets), pinned: !!row.pinned } as Task;
+  return {
+    ...row,
+    toolsets: parseStringArray(row.toolsets),
+    tags: parseStringArray(row.tags),
+    pinned: !!row.pinned,
+  } as Task;
 }
 
 export function getAllTasks(status?: TaskStatus): Task[] {
@@ -135,6 +140,7 @@ const ALLOWED_UPDATE_FIELDS = new Set<string>([
   'last_context_window_tokens',
   'estimated_cost_usd',
   'pinned',
+  'tags',
 ]);
 const updateStmtCache = new Map<string, ReturnType<typeof db.prepare>>();
 
@@ -154,6 +160,7 @@ type TaskUpdateFields = Pick<
   | 'last_context_window_tokens'
   | 'estimated_cost_usd'
   | 'pinned'
+  | 'tags'
 >;
 
 function getUpdateStmt(fieldKeys: string[]): ReturnType<typeof db.prepare> {
@@ -177,8 +184,8 @@ export function updateTask(
   for (const [key, value] of Object.entries(fields)) {
     if (!ALLOWED_UPDATE_FIELDS.has(key)) continue;
     fieldKeys.push(key);
-    if (key === 'toolsets') {
-      values[key] = serializeToolsets(value as string[] | null | undefined);
+    if (key === 'toolsets' || key === 'tags') {
+      values[key] = serializeStringArray(value as string[] | null | undefined);
     } else if (key === 'pinned') {
       // better-sqlite3 cannot bind booleans directly.
       values[key] = value ? 1 : 0;
