@@ -8,6 +8,7 @@ import type {
   ScheduledTaskInput,
   SessionMetadata,
   SessionSearchMatch,
+  SubagentSession,
   TaskMessage,
 } from '../../shared/types.js';
 
@@ -60,6 +61,8 @@ export interface AgentAdapter {
   getSessionMetadata(sessionId: string): Promise<SessionMetadata | null>;
 
   searchSessions(query: string, limit?: number): Promise<SessionSearchMatch[]>;
+
+  listChildSessions(sessionId: string): Promise<SubagentSession[]>;
 
   generateTitle(description: string): Promise<{ title: string }>;
 

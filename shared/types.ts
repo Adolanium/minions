@@ -137,6 +137,21 @@ export interface SessionMetadata {
   model: string | null;
 }
 
+export interface SubagentSession {
+  id: string;
+  parent_id: string | null;
+  depth: number;
+  title: string | null;
+  model: string | null;
+  started_at: number;
+  ended_at: number | null;
+  end_reason: string | null;
+  message_count: number;
+  tool_call_count: number;
+  total_tokens: number;
+  estimated_cost_usd: number | null;
+}
+
 export interface SessionSearchMatch {
   session_id: string;
   snippet: string;

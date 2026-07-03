@@ -15,6 +15,7 @@ import type {
   ContextUsage,
   SearchResponse,
   SessionMetadata,
+  SubagentSession,
   Task,
   TaskAgentSettings,
   TaskMessage,
@@ -115,6 +116,14 @@ export function fetchMessages(taskId: string) {
 
 export function fetchSession(taskId: string) {
   return request<{ session: SessionMetadata | null }>(`/tasks/${taskId}/session`);
+}
+
+export function fetchSubagents(taskId: string) {
+  return request<{ subagents: SubagentSession[] }>(`/tasks/${taskId}/subagents`);
+}
+
+export function fetchSubagentMessages(taskId: string, childId: string) {
+  return request<{ messages: TaskMessage[] }>(`/tasks/${taskId}/subagents/${encodeURIComponent(childId)}/messages`);
 }
 
 export function fetchSearch(query: string) {

@@ -14,6 +14,7 @@ import type {
   ScheduledTaskInput,
   SessionMetadata,
   SessionSearchMatch,
+  SubagentSession,
   TaskMessage,
 } from '../../shared/types.js';
 import type { AgentAdapter, AgentRunOptions, AgentRunSettings, StreamEvent } from './types.js';
@@ -570,6 +571,14 @@ export class HermesWorkerAdapter implements AgentAdapter {
       limit,
     });
     return result.matches;
+  }
+
+  async listChildSessions(sessionId: string): Promise<SubagentSession[]> {
+    const result = await this.client.request<{ children: SubagentSession[] }>({
+      type: 'session.children',
+      sessionId,
+    });
+    return result.children;
   }
 
   async getDefaults(): Promise<AgentDefaults> {

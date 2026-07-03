@@ -30,6 +30,7 @@ from hermes_worker_utils import (
     truncate_with_ellipsis,
 )
 from hermes_sessions import (
+    list_child_sessions,
     load_agent_history,
     open_session,
     project_session_messages,
@@ -1626,6 +1627,8 @@ def _handle_request(request: dict[str, Any]) -> None:
             _result(request_id, project_session_metadata(request.get("sessionId")))
         elif request_type == "session.search":
             _result(request_id, search_sessions(request.get("query"), request.get("limit")))
+        elif request_type == "session.children":
+            _result(request_id, list_child_sessions(request.get("sessionId")))
         elif request_type == "goal.status":
             _result(request_id, _goal_status(request))
         elif request_type == "goal.set":

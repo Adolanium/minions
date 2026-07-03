@@ -1,11 +1,12 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { MoreHorizontal, Trash2, Loader2, Pencil, Check, Archive } from 'lucide-react';
+import { MoreHorizontal, Trash2, Loader2, Pencil, Check, Archive, Users } from 'lucide-react';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
+import { SubagentsModal } from './SubagentsModal';
 import { StatusIcon } from './StatusIcon';
 import { useStore, optimisticMoveTask, isActiveRun } from '../lib/store';
 import { toast } from 'sonner';
-import { deleteTask, patchTask, moveTask, markTaskViewed, fetchSession } from '../lib/api';
+import { deleteTask, patchTask, moveTask, markTaskViewed, fetchSession, fetchSubagents } from '../lib/api';
 import { TASK_STATUSES } from '@shared/types';
 import { STATUS_META } from '../lib/constants';
 import { formatCost, timeAgo } from '../lib/format';
@@ -31,6 +32,8 @@ export function TaskDetailPage() {
 
   const [titleDraft, setTitleDraft] = useState('');
   const [sessionCost, setSessionCost] = useState<number | null>(null);
+  const [subagentCount, setSubagentCount] = useState(0);
+  const [showSubagents, setShowSubagents] = useState(false);
   const wasRunningRef = useRef(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const skipNextTitleSaveRef = useRef(false);
@@ -62,9 +65,25 @@ export function TaskDetailPage() {
       fetchSession(task.id)
         .then(({ session }) => setSessionCost(typeof session?.estimated_cost_usd === 'number' ? session.estimated_cost_usd : null))
         .catch(() => {});
+      fetchSubagents(task.id)
+        .then(({ subagents }) => setSubagentCount(subagents.length))
+        .catch(() => {});
     }
     wasRunningRef.current = isRunning;
   }, [isRunning, task?.id]);
+
+  useEffect(() => {
+    if (!task) return;
+    let cancelled = false;
+    fetchSubagents(task.id)
+      .then(({ subagents }) => {
+        if (!cancelled) setSubagentCount(subagents.length);
+      })
+      .catch(() => {
+        if (!cancelled) setSubagentCount(0);
+      });
+    return () => { cancelled = true; };
+  }, [task?.id]);
 
   useEffect(() => {
     if (!task || task.last_agent_response_at === null) return;
@@ -268,6 +287,20 @@ export function TaskDetailPage() {
                   {formatCost(sessionCost)}
                 </span>
               )}
+
+              {subagentCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowSubagents(true)}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 px-2 py-0.5 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200 shrink-0"
+                >
+                  <Users size={12} />
+                  Subagents
+                  <span className="rounded-full bg-zinc-200 px-1.5 text-[10px] font-semibold text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
+                    {subagentCount}
+                  </span>
+                </button>
+              )}
             </div>
 
             <div className="flex items-center gap-1.5 sm:gap-2.5">
@@ -350,6 +383,14 @@ export function TaskDetailPage() {
         <DeleteConfirmModal
           onConfirm={() => { setShowDeleteConfirm(false); handleDelete(); }}
           onCancel={() => setShowDeleteConfirm(false)}
+        />
+      )}
+
+      {showSubagents && (
+        <SubagentsModal
+          taskId={task.id}
+          onClose={() => setShowSubagents(false)}
+          onCountChange={setSubagentCount}
         />
       )}
     </div>
