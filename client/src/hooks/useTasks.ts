@@ -10,6 +10,7 @@ export function useTasks() {
   const removeTask = useStore((s) => s.removeTask);
   const setTaskRuns = useStore((s) => s.setTaskRuns);
   const setTaskRun = useStore((s) => s.setTaskRun);
+  const setWorkerUp = useStore((s) => s.setWorkerUp);
   const retryRef = useRef(0);
 
   useEffect(() => {
@@ -49,6 +50,8 @@ export function useTasks() {
             setTaskRuns(event.runs);
           } else if (event.type === 'task_run_updated') {
             setTaskRun(event.run);
+          } else if (event.type === 'worker_status') {
+            setWorkerUp(event.up);
           }
         } catch {}
       };
@@ -68,5 +71,5 @@ export function useTasks() {
       clearTimeout(retryTimeout);
       es?.close();
     };
-  }, [setTasks, upsertTask, removeTask, setTaskRuns, setTaskRun]);
+  }, [setTasks, upsertTask, removeTask, setTaskRuns, setTaskRun, setWorkerUp]);
 }

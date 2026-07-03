@@ -52,3 +52,15 @@ export function broadcast(event: BoardEvent) {
     if (!writeEvent(client, event)) clients.delete(client);
   }
 }
+
+let workerUp = true;
+
+export function getWorkerUp(): boolean {
+  return workerUp;
+}
+
+export function setWorkerUp(up: boolean) {
+  if (workerUp === up) return;
+  workerUp = up;
+  broadcast({ type: 'worker_status', up });
+}

@@ -72,7 +72,8 @@ export type BoardEvent =
   | { type: 'task_updated'; task: Task }
   | { type: 'task_deleted'; taskId: string }
   | { type: 'task_runs_snapshot'; runs: TaskRunState[] }
-  | { type: 'task_run_updated'; run: TaskRunState };
+  | { type: 'task_run_updated'; run: TaskRunState }
+  | { type: 'worker_status'; up: boolean };
 
 export type LiveChatMessage = TaskMessage & { tools?: ToolProgressEvent[] };
 

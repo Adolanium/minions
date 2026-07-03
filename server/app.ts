@@ -9,7 +9,7 @@ import { createSearchRouter } from './routes/search.js';
 import { skillsRouter } from './routes/skills.js';
 import { filesRouter } from './routes/files.js';
 import { HermesWorkerAdapter } from './adapters/hermes-worker.js';
-import { initSSE, addClient, sendEvent } from './events.js';
+import { initSSE, addClient, sendEvent, getWorkerUp } from './events.js';
 import { getRunStatuses } from './live-chat.js';
 import { getAppVersion } from './version.js';
 
@@ -32,6 +32,7 @@ app.get('/api/events', (req, res) => {
   initSSE(res);
   addClient(res);
   sendEvent(res, { type: 'task_runs_snapshot', runs: getRunStatuses() });
+  sendEvent(res, { type: 'worker_status', up: getWorkerUp() });
 });
 
 app.use('/api/files', express.json({ limit: '25mb' }), filesRouter);
