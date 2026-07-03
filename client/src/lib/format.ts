@@ -61,6 +61,12 @@ export function goalTurnLabel(turnsUsed: number, maxTurns: number, compact?: boo
   return compact ? `${currentTurn}/${maxTurns}` : `Turn ${currentTurn} of ${maxTurns}`;
 }
 
+export function formatClockTime(ms: number): string {
+  const date = new Date(ms);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+}
+
 export function timeAgo(ms: number): string {
   const seconds = Math.floor((Date.now() - ms) / 1000);
   if (seconds < 60) return 'just now';

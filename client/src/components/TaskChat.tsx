@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo, Fragment } from 'react';
-import { ArrowUp, Loader2, ChevronDown, ChevronRight, Check, Copy, Terminal, FileText, FilePenLine, Globe, Code, Wrench, X, Target, Square } from 'lucide-react';
+import { ArrowUp, Loader2, ChevronDown, ChevronRight, Check, Copy, RotateCcw, Terminal, FileText, FilePenLine, Globe, Code, Wrench, X, Target, Square } from 'lucide-react';
 import { InputToolbar, ContextRing } from './InputToolbar';
 import { AttachButton, AttachDropOverlay, AttachmentTray, UploadErrorBar } from './ChatAttachments';
 import { MarkdownContent } from './MarkdownContent';
@@ -10,7 +10,7 @@ import { useFileAttachments } from '../hooks/useFileAttachments';
 import { handleChatKeyDown, toggleRunMode } from '../lib/keyboard';
 import { ApiError, compactTask, interruptTask, type AgentRunSettings } from '../lib/api';
 import { useStore } from '../lib/store';
-import { GOAL_MODE_PLACEHOLDER, goalTurnLabel, toErrorMessage } from '../lib/format';
+import { GOAL_MODE_PLACEHOLDER, formatClockTime, formatDate, goalTurnLabel, toErrorMessage } from '../lib/format';
 import type { ChatRunMode, GoalStateSnapshot } from '@shared/types';
 
 interface TaskChatProps {
@@ -76,6 +76,19 @@ function CopyMessageButton({ content, label }: { content: string; label: string 
     >
       {copied ? <Check size={13} /> : <Copy size={13} />}
     </button>
+  );
+}
+
+function MessageTime({ createdAt }: { createdAt: number }) {
+  const label = formatClockTime(createdAt);
+  if (!label) return null;
+  return (
+    <span
+      title={formatDate(createdAt)}
+      className="text-[10px] leading-none text-zinc-400 opacity-0 transition-opacity group-hover:opacity-100 dark:text-zinc-500"
+    >
+      {label}
+    </span>
   );
 }
 
@@ -604,6 +617,29 @@ export function TaskChat({ taskId, initialMessage, initialSettings }: TaskChatPr
     }
   }, [submitWithAttachments, configPending, uploadBlocksSend, input, pendingFiles, queuedMessage, model, provider, reasoningEffort, runMode, isGoalStreaming, taskBusyForQueue, sendMessage, taskId]);
 
+  const canRetry = !isStreaming && !configPending && !queuedMessage && !taskBusyForQueue;
+
+  const handleRetry = useCallback(async () => {
+    if (!canRetry) return;
+    let lastUserContent: string | null = null;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'user' && messages[i].content) {
+        lastUserContent = messages[i].content;
+        break;
+      }
+    }
+    if (!lastUserContent) return;
+
+    const settings = { model, provider, reasoningEffort, toolsets, mode: runMode };
+    pendingRevealRef.current = true;
+    setOutgoingRevealActive(true);
+    const result = await sendMessage(taskId, lastUserContent, settings);
+    if (!result.ok) {
+      pendingRevealRef.current = false;
+      setOutgoingRevealActive(false);
+    }
+  }, [canRetry, messages, model, provider, reasoningEffort, toolsets, runMode, sendMessage, taskId]);
+
   const handleCompact = useCallback(async () => {
     if (compactionBlocker || isStreaming) return;
     setCompactInFlight(true);
@@ -723,7 +759,8 @@ export function TaskChat({ taskId, initialMessage, initialSettings }: TaskChatPr
                       <div className="min-w-0 max-w-[92%] overflow-hidden rounded-2xl bg-zinc-100 px-3.5 py-2.5 text-sm leading-relaxed text-zinc-900 whitespace-pre-wrap break-words dark:bg-zinc-800 dark:text-zinc-100 sm:max-w-[85%] sm:px-4">
                         {msg.content}
                       </div>
-                      <div className="mt-0.5">
+                      <div className="mt-0.5 flex items-center gap-1">
+                        <MessageTime createdAt={msg.created_at} />
                         <CopyMessageButton content={msg.content} label="Copy request" />
                       </div>
                     </div>
@@ -773,8 +810,21 @@ export function TaskChat({ taskId, initialMessage, initialSettings }: TaskChatPr
                         )}
                       </div>
                       {msg.content && !(isLastAssistant && isStreaming) && (
-                        <div className="mt-1 -ml-1">
+                        <div className="mt-1 -ml-1 flex items-center gap-1">
                           <CopyMessageButton content={msg.content} label="Copy response" />
+                          {isLastAssistant && (
+                            <button
+                              type="button"
+                              onClick={() => void handleRetry()}
+                              disabled={!canRetry}
+                              title="Retry — send the last request again"
+                              aria-label="Retry — send the last request again"
+                              className="inline-flex items-center gap-1 rounded-md p-1 text-zinc-400 opacity-0 transition-opacity hover:text-zinc-600 focus-visible:opacity-100 group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-30 dark:text-zinc-500 dark:hover:text-zinc-300"
+                            >
+                              <RotateCcw size={13} />
+                            </button>
+                          )}
+                          <MessageTime createdAt={msg.created_at} />
                         </div>
                       )}
                     </div>
