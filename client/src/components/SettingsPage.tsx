@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Settings, Bot, Sun, Moon, Monitor, Info, Volume2, VolumeX, Play, Bell, BellOff } from 'lucide-react';
+import { Sun, Moon, Monitor, Info, Volume2, VolumeX, Play, Bell, BellOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTheme, type ThemePreference } from '../hooks/useTheme';
 import { useSoundOnComplete } from '../hooks/useSoundOnComplete';
@@ -163,21 +163,6 @@ export function SettingsPage() {
   return (
     <div className="flex-1 p-6 overflow-y-auto">
       <div className="max-w-2xl space-y-5">
-        <div>
-          <h2 className="text-xs font-medium uppercase tracking-wide text-zinc-400 dark:text-zinc-500 mb-2">Adapter type</h2>
-          <div className="inline-flex rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-1 gap-1">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100">
-              <Bot size={14} />
-              Hermes
-            </div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-zinc-400 dark:text-zinc-500 cursor-not-allowed">
-              <Settings size={14} />
-              OpenClaw
-              <span className="ml-0.5 px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500">Soon</span>
-            </div>
-          </div>
-        </div>
-
         <section
           aria-labelledby="default-model-title"
           className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900 sm:p-5"

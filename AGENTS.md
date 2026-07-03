@@ -206,4 +206,4 @@ Docs: https://hermes-agent.nousresearch.com/docs/guides/python-library
 
 ## Future
 
-- **Additional adapters**: The `AgentAdapter` interface (`server/adapters/types.ts`) is pluggable. Other OpenAI-compatible backends (OpenClaw, LiteLLM, etc.) could implement it.
+- **Additional adapters**: The `AgentAdapter` interface (`server/adapters/types.ts`) is pluggable. Other OpenAI-compatible backends (LiteLLM, etc.) could implement it.
