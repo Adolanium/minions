@@ -108,12 +108,22 @@ function Dashboard({ report }: { report: AnalyticsReport }) {
     <div className="space-y-5">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <Stat label="Total tokens" value={formatTokenCount(totals.totalTokens)} />
-        <Stat label="Est. cost" value={costLabel(totals.estimatedCostUsd)} />
+        <Stat
+          label="Est. cost"
+          value={costLabel(totals.estimatedCostUsd)}
+          hint="Estimated from known provider pricing. Runs on providers without published pricing count as $0.00."
+        />
         <Stat label="Sessions" value={totals.sessions.toLocaleString()} />
         <Stat label="Messages" value={totals.messages.toLocaleString()} />
         <Stat label="Tool calls" value={totals.toolCalls.toLocaleString()} />
         <Stat label="Cache hit" value={`${cacheReadPct}%`} />
       </div>
+
+      <p className="text-[11px] leading-relaxed text-zinc-400 dark:text-zinc-600">
+        Costs are estimates based on the pricing Hermes knows for each provider. Runs on providers without
+        published pricing (for example free gateways) are counted as $0.00, so the real total can be higher
+        than shown.
+      </p>
 
       <DailyChart report={report} />
       <ModelBreakdown report={report} />
@@ -133,10 +143,13 @@ function Dashboard({ report }: { report: AnalyticsReport }) {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
-      <div className="text-[11px] font-medium uppercase tracking-wide text-zinc-400 dark:text-zinc-500">{label}</div>
+    <div title={hint} className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="text-[11px] font-medium uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
+        {label}
+        {hint && <span aria-hidden="true" className="ml-1 cursor-help text-zinc-300 dark:text-zinc-600">*</span>}
+      </div>
       <div className="mt-1 text-lg font-semibold text-zinc-900 dark:text-zinc-100">{value}</div>
     </div>
   );
