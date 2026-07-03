@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { SquarePen, Columns3, Settings, PanelLeftClose, PanelLeft, Repeat, Sparkles, Folder, Archive, Search, BrainCircuit, BarChart3, Boxes } from 'lucide-react';
+import { SquarePen, Columns3, Settings, PanelLeftClose, PanelLeft, Repeat, Sparkles, Folder, Archive, Search, BrainCircuit, BarChart3, Boxes, Plug } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { isEditableTarget } from '../lib/keyboard';
 
@@ -180,6 +180,14 @@ export function Sidebar() {
             className="sm:hidden"
           />
           <SidebarLink
+            icon={<Plug size={18} />}
+            label="MCP"
+            to="/mcp"
+            active={isActive('/mcp')}
+            collapsed={desktopCollapsed}
+            className="sm:hidden"
+          />
+          <SidebarLink
             icon={<Archive size={18} />}
             label="Archive"
             to="/archive"
@@ -235,6 +243,14 @@ export function Sidebar() {
               label="Models"
               to="/models"
               active={isActive('/models')}
+              collapsed={desktopCollapsed}
+              subdued
+            />
+            <SidebarLink
+              icon={<Plug size={18} />}
+              label="MCP"
+              to="/mcp"
+              active={isActive('/mcp')}
               collapsed={desktopCollapsed}
               subdued
             />

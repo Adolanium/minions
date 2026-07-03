@@ -7,6 +7,10 @@ import type {
   AnalyticsReport,
   AuxiliaryModelsResponse,
   ModelInfoResponse,
+  McpServersResponse,
+  McpSaveResponse,
+  McpServerInput,
+  McpProbeResponse,
   CompactResult,
   FileCreateResponse,
   FileCreateType,
@@ -294,6 +298,32 @@ export function writeFile(path: string, content: string, expectedModifiedAt?: nu
 
 export function fetchAnalytics(days = 30) {
   return request<AnalyticsReport>(`/analytics?days=${days}`);
+}
+
+export function fetchMcpServers() {
+  return request<McpServersResponse>('/mcp/servers');
+}
+
+export function saveMcpServer(input: McpServerInput) {
+  return request<McpSaveResponse>('/mcp/servers', {
+    method: 'PUT',
+    body: JSON.stringify(input),
+  });
+}
+
+export function removeMcpServer(name: string) {
+  return request<McpServersResponse>(`/mcp/servers/${encodeURIComponent(name)}`, { method: 'DELETE' });
+}
+
+export function setMcpServerEnabled(name: string, enabled: boolean) {
+  return request<McpServersResponse>(`/mcp/servers/${encodeURIComponent(name)}/enabled`, {
+    method: 'PUT',
+    body: JSON.stringify({ enabled }),
+  });
+}
+
+export function probeMcpServer(name: string) {
+  return request<McpProbeResponse>(`/mcp/servers/${encodeURIComponent(name)}/probe`, { method: 'POST' });
 }
 
 export function fetchModelInfo() {

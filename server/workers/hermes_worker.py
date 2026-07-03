@@ -38,6 +38,13 @@ from hermes_sessions import (
     project_session_metadata,
     search_sessions,
 )
+from hermes_mcp import (
+    list_mcp_servers,
+    probe_mcp_server,
+    remove_mcp_server,
+    save_mcp_server,
+    set_mcp_server_enabled,
+)
 from hermes_scheduled_tasks import (
     create_scheduled_task,
     get_scheduled_task,
@@ -130,6 +137,9 @@ _SessionDB: Any = None
 _CONFIG_CACHE: dict[str, Any] | None = None
 _CONFIG_MTIME: float = 0.0
 _MODEL_EXECUTOR = ThreadPoolExecutor(max_workers=1)
+# Slow best-effort I/O (e.g. probing an MCP server) that must not block the
+# synchronous stdin dispatch loop.
+_IO_EXECUTOR = ThreadPoolExecutor(max_workers=4)
 try:
     _MODEL_LIST_CACHE_TTL_SECONDS = max(0.0, float(os.environ.get("MINIONS_MODEL_LIST_CACHE_TTL_SECONDS", "60")))
 except ValueError:
@@ -1607,6 +1617,17 @@ def _run_one_shot_agent(label: str, system_message: str, user_message: str) -> s
     return final_text
 
 
+def _submit_background_io(request_id: str, request: dict[str, Any], handler: Callable[[dict[str, Any]], dict[str, Any]]) -> None:
+    """Run a slow, non-agent handler off the stdin loop and reply when it finishes."""
+    def runner() -> None:
+        try:
+            _result(request_id, handler(request))
+        except Exception as exc:
+            _send_error(request_id, exc)
+
+    _IO_EXECUTOR.submit(runner)
+
+
 def _submit_background_agent_request(
     request_id: str,
     request: dict[str, Any],
@@ -1808,6 +1829,16 @@ def _handle_request(request: dict[str, Any]) -> None:
             _result(request_id, _auxiliary_models())
         elif request_type == "models.auxiliary.set":
             _result(request_id, _set_auxiliary_model(request))
+        elif request_type == "mcp.list":
+            _result(request_id, list_mcp_servers())
+        elif request_type == "mcp.save":
+            _result(request_id, save_mcp_server(request))
+        elif request_type == "mcp.remove":
+            _result(request_id, remove_mcp_server(request))
+        elif request_type == "mcp.setEnabled":
+            _result(request_id, set_mcp_server_enabled(request))
+        elif request_type == "mcp.probe":
+            _submit_background_io(request_id, request, probe_mcp_server)
         elif request_type == "scheduledTasks.list":
             _result(request_id, list_scheduled_tasks(bool(request.get("includeDisabled")), request.get("limit")))
         elif request_type == "scheduledTasks.get":

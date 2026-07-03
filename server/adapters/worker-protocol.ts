@@ -5,6 +5,10 @@ import type {
   AnalyticsReport,
   AuxiliaryModelsResponse,
   GoalDecision,
+  McpProbeResponse,
+  McpSaveResponse,
+  McpServerInput,
+  McpServersResponse,
   ModelInfoResponse,
   GoalStateSnapshot,
   MemoryPathEntry,
@@ -29,6 +33,11 @@ export type WorkerRequest =
   | { id: string; type: 'models.info' }
   | { id: string; type: 'models.auxiliary.get' }
   | { id: string; type: 'models.auxiliary.set'; slot: string; model?: string | null; provider?: string | null }
+  | { id: string; type: 'mcp.list' }
+  | ({ id: string; type: 'mcp.save' } & McpServerInput)
+  | { id: string; type: 'mcp.remove'; name: string }
+  | { id: string; type: 'mcp.setEnabled'; name: string; enabled: boolean }
+  | { id: string; type: 'mcp.probe'; name: string }
   | { id: string; type: 'scheduledTasks.list'; includeDisabled?: boolean; limit?: number }
   | { id: string; type: 'scheduledTasks.get'; scheduledTaskId: string }
   | { id: string; type: 'scheduledTasks.create' } & ScheduledTaskInput
@@ -89,6 +98,9 @@ export type WorkerResult =
   | AnalyticsReport
   | ModelInfoResponse
   | AuxiliaryModelsResponse
+  | McpServersResponse
+  | McpSaveResponse
+  | McpProbeResponse
   | { scheduledTasks: ScheduledTask[] }
   | { scheduledTask: ScheduledTask | null }
   | { executed: number }
