@@ -62,12 +62,11 @@ Each task is a persistent Hermes root session. You talk to it, it works, and the
 - **Scheduled task supervision**: automatically monitor, recover, and report on scheduled agent jobs
 - **Notifications**: get alerted via Telegram, WhatsApp, or webhook when a task needs review
 - **Skills library**: pluggable skill templates for common workflows (lead gen, web research, content pipelines, data collection, competitive monitoring, outbound sequences)
-- **OpenClaw adapter**: run Minions against OpenClaw-hosted agents
 
 ## FAQ
 
 **Can I use this with other agents?**
-Not yet. The adapter interface exists, but launch is Hermes-only. OpenClaw is next.
+No. Minions is built for Hermes.
 
 ## Contributing
 

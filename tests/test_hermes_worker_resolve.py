@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "server" / "workers
 
 import hermes_worker
 
-PROXY_URL = "https://www.agent37.com/api/openclaw/starter-proxy/v1"
+PROXY_URL = "https://www.agent37.com/api/starter-proxy/v1"
 
 MANAGED_CFG = {
     "model": {"default": "default", "provider": "custom:agent37"},
