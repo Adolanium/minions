@@ -1,18 +1,20 @@
 import { Fragment, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, ChevronDown, Loader2, Search, Sparkles, Target, Zap, type LucideIcon } from 'lucide-react';
-import { MINIONS_GOAL_MAX_TURNS, REASONING_EFFORTS, type AgentDefaults, type AgentModelGroup, type ChatRunMode, type ContextUsage, type ReasoningEffort } from '@shared/types';
-import { formatTokenCount } from '../lib/format';
+import { MINIONS_GOAL_MAX_TURNS, REASONING_EFFORTS, type AgentDefaults, type AgentModelGroup, type ChatRunMode, type ContextUsage, type ReasoningEffort, type SessionMetadata } from '@shared/types';
+import { fetchSession } from '../lib/api';
+import { formatCost, formatTokenCount } from '../lib/format';
 import { GOAL_MODE_SHORTCUT_LABEL } from '../lib/keyboard';
 
 interface ContextRingProps {
   context: ContextUsage;
+  taskId: string;
   onCompact?: () => Promise<void>;
   compacting?: boolean;
   compactDisabled?: boolean;
 }
 
-export function ContextRing({ context, onCompact, compacting = false, compactDisabled = false }: ContextRingProps) {
+export function ContextRing({ context, taskId, onCompact, compacting = false, compactDisabled = false }: ContextRingProps) {
   const pct = context.window_tokens > 0
     ? Math.round((context.used_tokens / context.window_tokens) * 100)
     : 0;
@@ -32,11 +34,17 @@ export function ContextRing({ context, onCompact, compacting = false, compactDis
 
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [session, setSession] = useState<SessionMetadata | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
     setError(null);
+    setSession(null);
+
+    fetchSession(taskId)
+      .then((result) => setSession(result.session))
+      .catch(() => setSession(null));
 
     function handlePointerDown(event: MouseEvent) {
       if (containerRef.current?.contains(event.target as Node)) return;
@@ -56,7 +64,7 @@ export function ContextRing({ context, onCompact, compacting = false, compactDis
       document.removeEventListener('mousedown', handlePointerDown);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [open]);
+  }, [open, taskId]);
 
   const handleCompact = useCallback(async () => {
     if (!onCompact || compacting || compactDisabled) return;
@@ -118,9 +126,25 @@ export function ContextRing({ context, onCompact, compacting = false, compactDis
             {exceeded && (
               <p className="text-xs text-red-500 mb-0.5">{pct}% used (exceeded)</p>
             )}
-            <div className="text-xs text-zinc-500 dark:text-zinc-400 tabular-nums mb-3">
+            <div className={`text-xs text-zinc-500 dark:text-zinc-400 tabular-nums ${session ? 'mb-2.5' : 'mb-3'}`}>
               <p>Context: {formatTokenCount(context.used_tokens)} / {formatTokenCount(context.window_tokens)}</p>
             </div>
+
+            {session && (
+              <div className="mb-3 space-y-1.5">
+                {typeof session.estimated_cost_usd === 'number' && (
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 tabular-nums">
+                    Cost: {formatCost(session.estimated_cost_usd)}
+                  </p>
+                )}
+                <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px] text-zinc-400 dark:text-zinc-500 tabular-nums">
+                  <span>In {formatTokenCount(session.input_tokens)}</span>
+                  <span>Out {formatTokenCount(session.output_tokens)}</span>
+                  <span>Reasoning {formatTokenCount(session.reasoning_tokens)}</span>
+                  <span>Cache read {formatTokenCount(session.cache_read_tokens)}</span>
+                </div>
+              </div>
+            )}
 
             {onCompact && (
               <div className="border-t border-zinc-200 dark:border-zinc-700 pt-2.5">

@@ -3,7 +3,7 @@ import { useDraggable } from '@dnd-kit/core';
 import { Loader2, MoreHorizontal, Target } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { Task, TaskRunState } from '@shared/types';
-import { goalTurnLabel, timeAgo } from '../lib/format';
+import { formatCost, goalTurnLabel, timeAgo } from '../lib/format';
 import { isActiveRun } from '../lib/store';
 import { hasUnseenAgentResponse } from '../lib/taskState';
 import { TaskContextMenu } from './TaskContextMenu';
@@ -53,6 +53,11 @@ function TaskCardBody({ task, run }: { task: Task; run?: TaskRunState }) {
           )}
           <span className="truncate">{showBusyState ? busyLabel : timeAgo(task.updated_at)}</span>
         </div>
+        {task.estimated_cost_usd != null && task.estimated_cost_usd > 0 && (
+          <span className="shrink-0 text-[11px] leading-none text-zinc-400 dark:text-zinc-500">
+            {formatCost(task.estimated_cost_usd)}
+          </span>
+        )}
         {isGoalRun && (
           <span
             title={compactGoalLabel ? `Active goal run (${compactGoalLabel})` : 'Active goal run'}

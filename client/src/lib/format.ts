@@ -41,6 +41,12 @@ export function attachmentMessage(text: string, filePaths: string[]): string {
   return text ? text + block : `Please review these files.${block}`;
 }
 
+export function formatCost(value: number): string {
+  if (value < 0.01) return '<$0.01';
+  if (value < 10) return `$${value.toFixed(2)}`;
+  return `$${Math.round(value)}`;
+}
+
 export function formatTokenCount(n: number): string {
   if (n < 1000) return `${n}`;
   if (n < 100_000) return `${(n / 1000).toFixed(1)}K`;

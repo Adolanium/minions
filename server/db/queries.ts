@@ -64,6 +64,7 @@ export function insertTask(task: {
     last_viewed_at: null,
     last_context_used_tokens: null,
     last_context_window_tokens: null,
+    estimated_cost_usd: null,
   };
   stmtInsertTask.run(row);
   return row as Task;
@@ -79,6 +80,7 @@ const ALLOWED_UPDATE_FIELDS = new Set<string>([
   'last_agent_response_at',
   'last_context_used_tokens',
   'last_context_window_tokens',
+  'estimated_cost_usd',
 ]);
 const updateStmtCache = new Map<string, ReturnType<typeof db.prepare>>();
 
@@ -93,6 +95,7 @@ type TaskUpdateFields = Pick<
   | 'last_agent_response_at'
   | 'last_context_used_tokens'
   | 'last_context_window_tokens'
+  | 'estimated_cost_usd'
 >;
 
 function getUpdateStmt(fieldKeys: string[]): ReturnType<typeof db.prepare> {
@@ -135,13 +138,19 @@ export function contextFromTask(task: Task): ContextUsage | null {
   return { used_tokens: task.last_context_used_tokens, window_tokens: task.last_context_window_tokens };
 }
 
-export function recordAgentResponse(taskId: string, at = Date.now(), context?: ContextUsage | null): Task | undefined {
+export function recordAgentResponse(
+  taskId: string,
+  at = Date.now(),
+  context?: ContextUsage | null,
+  costUsd?: number | null,
+): Task | undefined {
   return updateTask(taskId, {
     last_agent_response_at: at,
     ...(context !== undefined ? {
       last_context_used_tokens: context?.used_tokens ?? null,
       last_context_window_tokens: context?.window_tokens ?? null,
     } : {}),
+    ...(costUsd !== undefined ? { estimated_cost_usd: costUsd } : {}),
   });
 }
 

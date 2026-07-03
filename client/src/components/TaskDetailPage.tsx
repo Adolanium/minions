@@ -3,12 +3,12 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { MoreHorizontal, Trash2, Loader2, Pencil, Check } from 'lucide-react';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { StatusIcon } from './StatusIcon';
-import { useStore, optimisticMoveTask } from '../lib/store';
+import { useStore, optimisticMoveTask, isActiveRun } from '../lib/store';
 import { toast } from 'sonner';
-import { deleteTask, patchTask, moveTask, markTaskViewed } from '../lib/api';
+import { deleteTask, patchTask, moveTask, markTaskViewed, fetchSession } from '../lib/api';
 import { TASK_STATUSES } from '@shared/types';
 import { STATUS_META } from '../lib/constants';
-import { timeAgo } from '../lib/format';
+import { formatCost, timeAgo } from '../lib/format';
 import { isEditableTarget } from '../lib/keyboard';
 import { TaskChat } from './TaskChat';
 import { RenameReveal, useRenameAnimation } from './RenameTitle';
@@ -26,8 +26,12 @@ export function TaskDetailPage() {
   const tasksLoaded = useStore((s) => s.tasksLoaded);
   const upsertTask = useStore((s) => s.upsertTask);
   const removeTask = useStore((s) => s.removeTask);
+  const taskRun = useStore((s) => s.taskRuns.get(taskId ?? ''));
+  const isRunning = !!taskRun && isActiveRun(taskRun);
 
   const [titleDraft, setTitleDraft] = useState('');
+  const [sessionCost, setSessionCost] = useState<number | null>(null);
+  const wasRunningRef = useRef(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const skipNextTitleSaveRef = useRef(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -39,6 +43,28 @@ export function TaskDetailPage() {
   useEffect(() => {
     if (task) setTitleDraft(task.title);
   }, [task?.id, task?.title]);
+
+  useEffect(() => {
+    if (!task) return;
+    let cancelled = false;
+    fetchSession(task.id)
+      .then(({ session }) => {
+        if (!cancelled) setSessionCost(typeof session?.estimated_cost_usd === 'number' ? session.estimated_cost_usd : null);
+      })
+      .catch(() => {
+        if (!cancelled) setSessionCost(null);
+      });
+    return () => { cancelled = true; };
+  }, [task?.id]);
+
+  useEffect(() => {
+    if (wasRunningRef.current && !isRunning && task) {
+      fetchSession(task.id)
+        .then(({ session }) => setSessionCost(typeof session?.estimated_cost_usd === 'number' ? session.estimated_cost_usd : null))
+        .catch(() => {});
+    }
+    wasRunningRef.current = isRunning;
+  }, [isRunning, task?.id]);
 
   useEffect(() => {
     if (!task || task.last_agent_response_at === null) return;
@@ -217,6 +243,12 @@ export function TaskDetailPage() {
               <span className="text-xs text-zinc-400 dark:text-zinc-500 shrink-0">
                 {timeAgo(task.updated_at)}
               </span>
+
+              {sessionCost != null && sessionCost > 0 && (
+                <span className="text-xs text-zinc-400 dark:text-zinc-500 shrink-0">
+                  {formatCost(sessionCost)}
+                </span>
+              )}
             </div>
 
             <div className="flex items-center gap-1.5 sm:gap-2.5">
