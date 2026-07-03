@@ -144,6 +144,53 @@ async function settleRun(taskId: string, runId: string, context: ContextUsage | 
   finishRun(taskId, ttl, runId);
 }
 
+const RUN_INACTIVITY_TIMEOUT_MS = parseInt(process.env.MINIONS_RUN_INACTIVITY_TIMEOUT_MS || '900000', 10);
+
+// Races each stream event against an inactivity timer that resets on every event. On
+// timeout, best-effort interrupts the Hermes run and throws so the caller's existing
+// error handling settles the run. A timeout of 0 disables the watchdog entirely.
+async function* withInactivityWatchdog(
+  taskId: string,
+  stream: AsyncIterable<StreamEvent>,
+): AsyncGenerator<StreamEvent> {
+  if (!RUN_INACTIVITY_TIMEOUT_MS) {
+    yield* stream;
+    return;
+  }
+
+  const iterator = stream[Symbol.asyncIterator]();
+  try {
+    while (true) {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const timedOut = new Promise<'timeout'>((resolve) => {
+        timer = setTimeout(() => resolve('timeout'), RUN_INACTIVITY_TIMEOUT_MS);
+      });
+
+      let outcome: IteratorResult<StreamEvent> | 'timeout';
+      try {
+        outcome = await Promise.race([iterator.next(), timedOut]);
+      } finally {
+        clearTimeout(timer);
+      }
+
+      if (outcome === 'timeout') {
+        try {
+          void adapter.interruptChat(taskId).catch(() => {});
+        } catch {
+          // best effort
+        }
+        const minutes = Math.round(RUN_INACTIVITY_TIMEOUT_MS / 60_000);
+        throw new Error(`Run timed out after ${minutes} minutes of inactivity`);
+      }
+
+      if (outcome.done) return;
+      yield outcome.value;
+    }
+  } finally {
+    iterator.return?.().catch(() => {});
+  }
+}
+
 async function streamChatTurn(
   runTask: Task,
   sessionId: string,
@@ -157,11 +204,11 @@ async function streamChatTurn(
   let interrupted = false;
 
   try {
-    const stream = adapter.chatStream(sessionId, content, {
+    const stream = withInactivityWatchdog(runTask.id, adapter.chatStream(sessionId, content, {
       systemMessage: TASK_AGENT_SYSTEM_PROMPT,
       settings: taskRunSettings(runTask),
       task: { id: runTask.id, title: runTask.title },
-    });
+    }));
 
     for await (const event of stream) {
       if (options.captureResponseText && event.type === 'text_delta' && event.content) {

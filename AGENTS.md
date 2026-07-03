@@ -189,6 +189,7 @@ HERMES_AGENT_RUN_LIMIT=10        # Max concurrent AIAgent.run_conversation calls
 MINIONS_HOME=~/.minions          # State directory (DB, logs, backups, workspace)
 DB_PATH=~/.minions/data/minions.db  # SQLite database path
 MINIONS_MODEL_LIST_CACHE_TTL_SECONDS=60  # Cache TTL for model list in Python worker
+MINIONS_RUN_INACTIVITY_TIMEOUT_MS=900000 # Inactivity watchdog for chat/goal runs; 0 disables it
 ```
 
 ## Hermes Python Library
