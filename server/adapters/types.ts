@@ -1,6 +1,7 @@
 import type {
   AgentRunSettings,
   AgentToolsetsResponse,
+  AnalyticsReport,
   CompactResult,
   ContextUsage,
   GoalDecision,
@@ -63,6 +64,8 @@ export interface AgentAdapter {
   listToolsets(): Promise<AgentToolsetsResponse>;
 
   getMemoryPaths(): Promise<{ hermesHome: string; files: MemoryPathEntry[] }>;
+
+  getInsights(days?: number): Promise<AnalyticsReport>;
 
   getSessionMetadata(sessionId: string): Promise<SessionMetadata | null>;
 
