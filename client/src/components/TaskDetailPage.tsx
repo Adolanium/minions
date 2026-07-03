@@ -21,8 +21,20 @@ export function TaskDetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const locationState = location.state as { initialMessage?: string; initialSettings?: AgentRunSettings } | null;
-  const initialMessage = locationState?.initialMessage;
-  const initialSettings = locationState?.initialSettings;
+  // Capture the navigation payload on the first render for this task, before the
+  // effect below wipes location.state. TaskChat only mounts once the task lands
+  // in the store (via async SSE), which can happen after the wipe, so reading
+  // location.state live would drop the first message and leave the task idle.
+  const initialPayloadRef = useRef<{ taskId: string | undefined; initialMessage?: string; initialSettings?: AgentRunSettings }>({ taskId: undefined });
+  if (initialPayloadRef.current.taskId !== taskId) {
+    initialPayloadRef.current = {
+      taskId,
+      initialMessage: locationState?.initialMessage,
+      initialSettings: locationState?.initialSettings,
+    };
+  }
+  const initialMessage = initialPayloadRef.current.initialMessage;
+  const initialSettings = initialPayloadRef.current.initialSettings;
   const task = useStore((s) => s.tasks.find((t) => t.id === taskId) ?? null);
   const tasksLoaded = useStore((s) => s.tasksLoaded);
   const upsertTask = useStore((s) => s.upsertTask);
@@ -109,11 +121,12 @@ export function TaskDetailPage() {
       });
   }, [task?.id, task?.last_agent_response_at, task?.last_viewed_at, upsertTask]);
 
+  const hasNavState = Boolean(locationState?.initialMessage || locationState?.initialSettings);
   useEffect(() => {
-    if (initialMessage || initialSettings) {
+    if (hasNavState) {
       navigate(location.pathname, { replace: true, state: {} });
     }
-  }, [taskId, initialMessage, initialSettings, navigate, location.pathname]);
+  }, [taskId, hasNavState, navigate, location.pathname]);
 
   useEffect(() => {
     if (!showMenu) return;
