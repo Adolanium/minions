@@ -30,5 +30,6 @@ ensureColumn('tasks', 'estimated_cost_usd', 'REAL');
 ensureColumn('tasks', 'toolsets', 'TEXT');
 ensureColumn('tasks', 'depends_on_task_id', 'TEXT');
 ensureColumn('tasks', 'pending_prompt', 'TEXT');
+ensureColumn('tasks', 'pinned', 'INTEGER DEFAULT 0');
 
 export default db;

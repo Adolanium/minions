@@ -60,7 +60,7 @@ function serializeToolsets(value: string[] | null | undefined): string | null {
 }
 
 function toTask(row: Record<string, unknown>): Task {
-  return { ...row, toolsets: parseToolsets(row.toolsets) } as Task;
+  return { ...row, toolsets: parseToolsets(row.toolsets), pinned: !!row.pinned } as Task;
 }
 
 export function getAllTasks(status?: TaskStatus): Task[] {
@@ -112,7 +112,7 @@ export function insertTask(task: {
     pending_prompt: task.pending_prompt ?? null,
   };
   stmtInsertTask.run(row);
-  return row as Task;
+  return toTask(row);
 }
 
 export function getDependentTasks(taskId: string): Task[] {
@@ -134,6 +134,7 @@ const ALLOWED_UPDATE_FIELDS = new Set<string>([
   'last_context_used_tokens',
   'last_context_window_tokens',
   'estimated_cost_usd',
+  'pinned',
 ]);
 const updateStmtCache = new Map<string, ReturnType<typeof db.prepare>>();
 
@@ -152,6 +153,7 @@ type TaskUpdateFields = Pick<
   | 'last_context_used_tokens'
   | 'last_context_window_tokens'
   | 'estimated_cost_usd'
+  | 'pinned'
 >;
 
 function getUpdateStmt(fieldKeys: string[]): ReturnType<typeof db.prepare> {
@@ -175,7 +177,14 @@ export function updateTask(
   for (const [key, value] of Object.entries(fields)) {
     if (!ALLOWED_UPDATE_FIELDS.has(key)) continue;
     fieldKeys.push(key);
-    values[key] = key === 'toolsets' ? serializeToolsets(value as string[] | null | undefined) : value ?? null;
+    if (key === 'toolsets') {
+      values[key] = serializeToolsets(value as string[] | null | undefined);
+    } else if (key === 'pinned') {
+      // better-sqlite3 cannot bind booleans directly.
+      values[key] = value ? 1 : 0;
+    } else {
+      values[key] = value ?? null;
+    }
   }
 
   if (fieldKeys.length === 0) return getTask(id);

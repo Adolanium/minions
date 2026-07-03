@@ -108,7 +108,9 @@ export function Board() {
     for (const t of tasks) {
       if (t.status in buckets && matchesFilter(t)) buckets[t.status].push(t);
     }
-    for (const s of TASK_STATUSES) buckets[s].sort((a, b) => b.updated_at - a.updated_at);
+    for (const s of TASK_STATUSES) {
+      buckets[s].sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updated_at - a.updated_at);
+    }
     return buckets;
   }, [tasks, filter]);
 

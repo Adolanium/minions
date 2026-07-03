@@ -1,14 +1,14 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
-import { Archive, Play, Trash2 } from 'lucide-react';
+import { Archive, Pin, PinOff, Play, Trash2 } from 'lucide-react';
 import type { Task, TaskStatus } from '@shared/types';
 import { TASK_STATUSES } from '@shared/types';
 import { STATUS_META } from '../lib/constants';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { StatusIcon } from './StatusIcon';
 import { useStore, optimisticMoveTask } from '../lib/store';
-import { moveTask, deleteTask, startTaskNow } from '../lib/api';
+import { moveTask, deleteTask, startTaskNow, patchTask } from '../lib/api';
 
 interface Props {
   task: Task;
@@ -89,6 +89,18 @@ export function TaskContextMenu({ task, x, y, onClose }: Props) {
     } catch {}
   }
 
+  async function handleTogglePin() {
+    onClose();
+    // Optimistic flip; the PATCH response (and its broadcast) settles the final state.
+    upsertTask({ ...task, pinned: !task.pinned });
+    try {
+      const { task: updated } = await patchTask(task.id, { pinned: !task.pinned });
+      upsertTask(updated);
+    } catch {
+      upsertTask(task);
+    }
+  }
+
   const otherStatuses = TASK_STATUSES.filter((s) => s !== task.status);
   const isWaiting = !!task.depends_on_task_id;
 
@@ -114,6 +126,16 @@ export function TaskContextMenu({ task, x, y, onClose }: Props) {
             <div className="my-1 border-t border-zinc-200 dark:border-zinc-800" />
           </>
         )}
+        <button
+          type="button"
+          role="menuitem"
+          onClick={handleTogglePin}
+          className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-left"
+        >
+          {task.pinned ? <PinOff size={14} /> : <Pin size={14} />}
+          {task.pinned ? 'Unpin' : 'Pin to top'}
+        </button>
+        <div className="my-1 border-t border-zinc-200 dark:border-zinc-800" />
         <p className="px-3 py-1.5 text-[11px] font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
           Move to
         </p>
