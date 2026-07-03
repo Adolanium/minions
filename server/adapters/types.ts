@@ -32,6 +32,8 @@ export interface StreamEvent {
   status?: 'running' | 'completed' | 'error';
   duration?: number;
   label?: string;
+  args?: string;
+  result?: string;
   context?: ContextUsage | null;
   interrupted?: boolean;
 }

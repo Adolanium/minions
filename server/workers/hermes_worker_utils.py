@@ -37,3 +37,16 @@ def truncate_with_ellipsis(text: str, max_chars: int) -> str:
     if len(text) <= max_chars:
         return text
     return text[: max_chars - 3].rstrip() + "..."
+
+
+# Tool call arg/result previews shown in the chat UI. Kept in sync between the
+# live tool_progress stream (hermes_worker.py) and the history projection
+# (hermes_sessions.py) so both sources render identically on the client.
+TOOL_ARGS_MAX_CHARS = 4000
+TOOL_RESULT_MAX_CHARS = 8000
+
+
+def truncate_tool_field(text: str, max_chars: int) -> str:
+    if len(text) <= max_chars:
+        return text
+    return text[:max_chars] + "\n... [truncated]"

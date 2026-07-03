@@ -21,8 +21,12 @@ from typing import Any, Callable
 sys.modules.setdefault("hermes_worker", sys.modules[__name__])
 
 from hermes_worker_utils import (
+    TOOL_ARGS_MAX_CHARS,
+    TOOL_RESULT_MAX_CHARS,
     WorkerError,
+    json_safe,
     string_or_none,
+    truncate_tool_field,
     truncate_with_ellipsis,
 )
 from hermes_sessions import (
@@ -1181,6 +1185,33 @@ def _goal_evaluate(request: dict[str, Any]) -> dict[str, Any]:
     return _project_goal_decision(decision, mgr.state)
 
 
+def _serialize_tool_args(tool_args: Any) -> str | None:
+    if tool_args is None:
+        return None
+    try:
+        text = json.dumps(json_safe(tool_args), ensure_ascii=False)
+    except Exception:
+        text = str(tool_args)
+    if not text:
+        return None
+    return truncate_tool_field(text, TOOL_ARGS_MAX_CHARS)
+
+
+def _serialize_tool_result(result: Any) -> str | None:
+    if result is None:
+        return None
+    if isinstance(result, str):
+        text = result
+    else:
+        try:
+            text = json.dumps(json_safe(result), ensure_ascii=False)
+        except Exception:
+            text = str(result)
+    if not text:
+        return None
+    return truncate_tool_field(text, TOOL_RESULT_MAX_CHARS)
+
+
 def _run_chat(request_id: str, request: dict[str, Any]) -> None:
     settings = request.get("settings") if isinstance(request.get("settings"), dict) else {}
     requested_model = string_or_none(settings.get("model"))
@@ -1235,24 +1266,35 @@ def _run_chat(request_id: str, request: dict[str, Any]) -> None:
 
         tool_name = str(name or "tool")
         if event_type in {None, "tool.started"}:
-            _send({
+            payload: dict[str, Any] = {
                 "id": request_id,
                 "type": "tool_progress",
                 "tool": tool_name,
                 "status": "running",
                 "label": str(preview) if preview else None,
-            })
+            }
+            serialized_args = _serialize_tool_args(tool_args)
+            if serialized_args is not None:
+                payload["args"] = serialized_args
+            _send(payload)
             return
 
         if event_type == "tool.completed":
-            _send({
+            payload = {
                 "id": request_id,
                 "type": "tool_progress",
                 "tool": tool_name,
                 "status": "error" if kwargs.get("is_error") else "completed",
                 "duration": kwargs.get("duration"),
                 "label": str(preview) if preview else None,
-            })
+            }
+            serialized_args = _serialize_tool_args(tool_args)
+            if serialized_args is not None:
+                payload["args"] = serialized_args
+            serialized_result = _serialize_tool_result(kwargs.get("result"))
+            if serialized_result is not None:
+                payload["result"] = serialized_result
+            _send(payload)
 
     agent = _create_agent(
         session_id=session_id,

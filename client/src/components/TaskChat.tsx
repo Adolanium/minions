@@ -3,6 +3,7 @@ import { ArrowUp, Loader2, ChevronDown, ChevronRight, Check, Terminal, FileText,
 import { InputToolbar, ContextRing } from './InputToolbar';
 import { AttachButton, AttachDropOverlay, AttachmentTray, UploadErrorBar } from './ChatAttachments';
 import { MarkdownContent } from './MarkdownContent';
+import { DiffView, looksLikeDiff } from './DiffView';
 import { useChat, ToolProgressEvent } from '../hooks/useChat';
 import { useAgentConfig } from '../hooks/useAgentConfig';
 import { useFileAttachments } from '../hooks/useFileAttachments';
@@ -87,33 +88,160 @@ function formatToolName(name: string): string {
   return name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
+const MONO_BLOCK_CLASS = 'max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-zinc-200 bg-zinc-50 p-2 font-mono text-xs text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900/60 dark:text-zinc-300';
+const DETAIL_LABEL_CLASS = 'mb-1 text-[11px] font-medium uppercase tracking-wide text-zinc-400 dark:text-zinc-500';
+
+// Tools whose args look like { path, content } (see write_file's schema in
+// hermes-agent/tools/file_tools.py) get a dedicated path header + content
+// block instead of a raw JSON dump.
+const WRITE_TOOL_NAME_PATTERN = /write|create/i;
+const WRITE_CONTENT_ARG_KEYS = ['content', 'text', 'body'];
+
+function MonoBlock({ children }: { children: string }) {
+  return <pre className={MONO_BLOCK_CLASS}>{children}</pre>;
+}
+
+function parseToolArgs(raw: string): { object: Record<string, unknown> | null } {
+  try {
+    const value = JSON.parse(raw) as unknown;
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      return { object: value as Record<string, unknown> };
+    }
+  } catch {
+    // not JSON — fall through to raw rendering
+  }
+  return { object: null };
+}
+
+function findWriteFileArgs(toolName: string, args: Record<string, unknown>): { path: string; content: string; contentKey: string } | null {
+  if (!WRITE_TOOL_NAME_PATTERN.test(toolName)) return null;
+  const path = args.path;
+  if (typeof path !== 'string' || !path) return null;
+  for (const key of WRITE_CONTENT_ARG_KEYS) {
+    const value = args[key];
+    if (typeof value === 'string') return { path, content: value, contentKey: key };
+  }
+  return null;
+}
+
+function ToolArgsView({ toolName, args }: { toolName: string; args: string }) {
+  const { object } = parseToolArgs(args);
+
+  if (!object) {
+    return looksLikeDiff(args) ? <DiffView diff={args} /> : <MonoBlock>{args}</MonoBlock>;
+  }
+
+  const writeFile = findWriteFileArgs(toolName, object);
+  const diffEntries: [string, string][] = [];
+  const jsonEntries: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(object)) {
+    if (writeFile && (key === 'path' || key === writeFile.contentKey)) continue;
+    if (typeof value === 'string' && looksLikeDiff(value)) {
+      diffEntries.push([key, value]);
+      continue;
+    }
+    jsonEntries[key] = value;
+  }
+
+  const hasJsonEntries = Object.keys(jsonEntries).length > 0;
+
+  return (
+    <div className="space-y-2">
+      {writeFile && (
+        <div>
+          <div className="mb-1 truncate font-mono text-[11px] text-zinc-500 dark:text-zinc-400">{writeFile.path}</div>
+          <MonoBlock>{writeFile.content}</MonoBlock>
+        </div>
+      )}
+      {diffEntries.map(([key, value]) => (
+        <div key={key}>
+          {diffEntries.length > 1 && <div className="mb-1 text-[11px] text-zinc-400 dark:text-zinc-500">{key}</div>}
+          <DiffView diff={value} />
+        </div>
+      ))}
+      {hasJsonEntries && <MonoBlock>{JSON.stringify(jsonEntries, null, 2)}</MonoBlock>}
+    </div>
+  );
+}
+
+function ToolCallExpanded({ tool }: { tool: ToolProgressEvent }) {
+  return (
+    <div className="mt-2 space-y-3 border-t border-zinc-100 pt-2.5 dark:border-zinc-800">
+      {tool.args && (
+        <div>
+          <div className={DETAIL_LABEL_CLASS}>Arguments</div>
+          <ToolArgsView toolName={tool.tool} args={tool.args} />
+        </div>
+      )}
+      {tool.result && (
+        <div>
+          <div className={DETAIL_LABEL_CLASS}>Output</div>
+          <MonoBlock>{tool.result}</MonoBlock>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ToolCallBlock({ tool }: { tool: ToolProgressEvent }) {
   const Icon = getToolIcon(tool.tool);
+  const [expanded, setExpanded] = useState(false);
+  const canExpand = !!tool.args || !!tool.result;
+
+  const toggle = () => {
+    if (canExpand) setExpanded((prev) => !prev);
+  };
+
   return (
-    <div className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl border ${
+    <div className={`rounded-xl border ${
       tool.status === 'error'
         ? 'border-red-200 dark:border-red-900'
         : 'border-zinc-200 dark:border-zinc-700'
     }`}>
-      <Icon size={14} className="text-zinc-400 dark:text-zinc-500 shrink-0" />
-      <span className={`text-sm font-medium shrink-0 ${
-        tool.status === 'error'
-          ? 'text-red-500 dark:text-red-400'
-          : 'text-zinc-600 dark:text-zinc-300'
-      }`}>
-        {formatToolName(tool.tool)}
-      </span>
-      {tool.label && (
-        <span className="text-xs text-zinc-400 dark:text-zinc-500 font-mono truncate min-w-0">
-          {tool.label}
+      <div
+        role={canExpand ? 'button' : undefined}
+        tabIndex={canExpand ? 0 : undefined}
+        onClick={toggle}
+        onKeyDown={(e) => {
+          if (!canExpand) return;
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            toggle();
+          }
+        }}
+        className={`flex items-center gap-2.5 px-4 py-2.5 ${canExpand ? 'cursor-pointer' : ''}`}
+      >
+        <Icon size={14} className="text-zinc-400 dark:text-zinc-500 shrink-0" />
+        <span className={`text-sm font-medium shrink-0 ${
+          tool.status === 'error'
+            ? 'text-red-500 dark:text-red-400'
+            : 'text-zinc-600 dark:text-zinc-300'
+        }`}>
+          {formatToolName(tool.tool)}
         </span>
-      )}
-      {tool.status === 'running' && <Loader2 size={14} className="animate-spin text-zinc-400 shrink-0" />}
-      {tool.status === 'completed' && <Check size={14} className="text-zinc-400 shrink-0" />}
-      {tool.duration != null && (
-        <span className="text-xs text-zinc-300 dark:text-zinc-600 ml-auto shrink-0 tabular-nums">
-          {tool.duration.toFixed(1)}s
-        </span>
+        {tool.label && (
+          <span className="text-xs text-zinc-400 dark:text-zinc-500 font-mono truncate min-w-0">
+            {tool.label}
+          </span>
+        )}
+        {tool.status === 'running' && <Loader2 size={14} className="animate-spin text-zinc-400 shrink-0" />}
+        {tool.status === 'completed' && <Check size={14} className="text-zinc-400 shrink-0" />}
+        {tool.duration != null && (
+          <span className="text-xs text-zinc-300 dark:text-zinc-600 ml-auto shrink-0 tabular-nums">
+            {tool.duration.toFixed(1)}s
+          </span>
+        )}
+        {canExpand && (
+          expanded
+            ? <ChevronDown size={14} className={`shrink-0 text-zinc-300 dark:text-zinc-600 ${tool.duration == null ? 'ml-auto' : ''}`} />
+            : <ChevronRight size={14} className={`shrink-0 text-zinc-300 dark:text-zinc-600 ${tool.duration == null ? 'ml-auto' : ''}`} />
+        )}
+      </div>
+      {expanded && canExpand && (
+        <div className="px-4 pb-3">
+          <ToolCallExpanded tool={tool} />
+        </div>
       )}
     </div>
   );

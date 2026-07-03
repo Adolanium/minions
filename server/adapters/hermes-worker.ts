@@ -511,6 +511,8 @@ export class HermesWorkerAdapter implements AgentAdapter {
             status: event.status ?? 'running',
             duration: event.duration,
             label: event.label ?? undefined,
+            args: event.args,
+            result: event.result,
           };
           break;
         case 'error':

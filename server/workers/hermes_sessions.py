@@ -11,7 +11,14 @@ import sqlite3
 import time
 from typing import Any
 
-from hermes_worker_utils import WorkerError, json_safe, string_or_none
+from hermes_worker_utils import (
+    TOOL_ARGS_MAX_CHARS,
+    TOOL_RESULT_MAX_CHARS,
+    WorkerError,
+    json_safe,
+    string_or_none,
+    truncate_tool_field,
+)
 
 
 AGENT_HISTORY_KEYS = {
@@ -232,6 +239,96 @@ def _thinking_to_text(value: Any) -> str | None:
         return str(value)
 
 
+_TOOL_LABEL_ARG_KEYS = ("command", "path", "pattern", "query", "url")
+
+
+def _tool_call_name(tool_call: dict[str, Any]) -> str:
+    function = tool_call.get("function")
+    if isinstance(function, dict):
+        name = string_or_none(function.get("name"))
+        if name:
+            return name
+    return string_or_none(tool_call.get("name")) or string_or_none(tool_call.get("function_name")) or "tool"
+
+
+def _tool_call_argument_string(tool_call: dict[str, Any]) -> str | None:
+    function = tool_call.get("function")
+    raw = function.get("arguments") if isinstance(function, dict) else None
+    if raw is None:
+        raw = tool_call.get("arguments")
+    if raw is None:
+        return None
+    if isinstance(raw, str):
+        text = raw
+    else:
+        try:
+            text = json.dumps(json_safe(raw), ensure_ascii=False)
+        except Exception:
+            text = str(raw)
+    return text or None
+
+
+def _tool_call_label(args_text: str | None) -> str | None:
+    if not args_text:
+        return None
+    try:
+        parsed = json.loads(args_text)
+    except Exception:
+        return None
+    if not isinstance(parsed, dict):
+        return None
+    for key in _TOOL_LABEL_ARG_KEYS:
+        value = parsed.get(key)
+        if isinstance(value, str) and value.strip():
+            return truncate_tool_field(value.strip(), 200)
+    return None
+
+
+def _project_tool_result(content: Any) -> tuple[bool, str | None]:
+    text = _content_to_text(content)
+    if not text.strip():
+        return False, None
+    is_error = False
+    try:
+        parsed = json.loads(text)
+        if isinstance(parsed, dict) and "error" in parsed:
+            is_error = True
+    except Exception:
+        pass
+    return is_error, truncate_tool_field(text, TOOL_RESULT_MAX_CHARS)
+
+
+def _project_row_tool_calls(tool_calls: Any, tool_results: dict[str, Any]) -> list[dict[str, Any]]:
+    if not isinstance(tool_calls, list) or not tool_calls:
+        return []
+
+    tools: list[dict[str, Any]] = []
+    for tool_call in tool_calls:
+        if not isinstance(tool_call, dict):
+            continue
+
+        args_text = _tool_call_argument_string(tool_call)
+        entry: dict[str, Any] = {"tool": _tool_call_name(tool_call), "status": "completed"}
+
+        label = _tool_call_label(args_text)
+        if label:
+            entry["label"] = label
+        if args_text:
+            entry["args"] = truncate_tool_field(args_text, TOOL_ARGS_MAX_CHARS)
+
+        call_id = string_or_none(tool_call.get("id"))
+        result_content = tool_results.get(call_id) if call_id else None
+        if result_content is not None:
+            is_error, result_text = _project_tool_result(result_content)
+            if result_text is not None:
+                entry["result"] = result_text
+            if is_error:
+                entry["status"] = "error"
+
+        tools.append(entry)
+    return tools
+
+
 def project_session_messages(session_id: Any, task_id: Any = None) -> dict[str, Any]:
     session_id = string_or_none(session_id)
     if not session_id:
@@ -250,6 +347,21 @@ def project_session_messages(session_id: Any, task_id: Any = None) -> dict[str, 
         is_root_session = lineage_index == 0
         compaction_seen = is_root_session
         child_user_seen = is_root_session
+
+        # Tool-role rows carry the result content for a tool call, keyed by the
+        # tool_call_id it answers. Assistant rows that only carry tool_calls
+        # (no visible text) never get their own projected message, so their
+        # tool calls are accumulated here and attached to the next assistant
+        # row in the turn that does have content — mirroring how live-chat.ts
+        # accumulates every tool_progress event onto a single assistant message.
+        tool_results: dict[str, Any] = {}
+        for row in rows:
+            if isinstance(row, dict) and row.get("role") == "tool":
+                call_id = string_or_none(row.get("tool_call_id"))
+                if call_id:
+                    tool_results[call_id] = row.get("content")
+
+        pending_tools: list[dict[str, Any]] = []
 
         for row in rows:
             if not isinstance(row, dict):
@@ -271,12 +383,17 @@ def project_session_messages(session_id: Any, task_id: Any = None) -> dict[str, 
                     })
                     compaction_seen = True
                     child_user_seen = False
+                    pending_tools = []
                     continue
                 if not compaction_seen:
                     continue
                 child_user_seen = True
+                pending_tools = []
             elif not compaction_seen or not child_user_seen:
                 continue
+
+            if role == "assistant":
+                pending_tools.extend(_project_row_tool_calls(row.get("tool_calls"), tool_results))
 
             if role == "assistant" and not content.strip() and row.get("tool_calls"):
                 continue
@@ -299,6 +416,9 @@ def project_session_messages(session_id: Any, task_id: Any = None) -> dict[str, 
                 )
                 if thinking:
                     message["thinking"] = thinking
+                if pending_tools:
+                    message["tools"] = pending_tools
+                    pending_tools = []
             projected.append(message)
 
     return {"messages": projected}
