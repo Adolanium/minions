@@ -162,7 +162,7 @@ export function NewTaskPage() {
           <AttachmentTray files={pendingFiles} onRemove={removeFile} onRetry={retryFile} />
           {uploadError && <UploadErrorBar error={uploadError} onDismiss={() => setUploadError(null)} />}
           <div className="flex items-center justify-between gap-2 px-3 pb-3 sm:gap-3 sm:px-4">
-            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
               <AttachButton onFiles={addFiles} disabled={isCreating} />
               <TemplatesMenu
                 disabled={isCreating}
@@ -191,18 +191,20 @@ export function NewTaskPage() {
                 onToolsetsChange={setToolsets}
                 onRunModeChange={setRunMode}
               />
-              <select
-                value={dependsOnTaskId}
-                onChange={(e) => setDependsOnTaskId(e.target.value)}
-                disabled={isCreating}
-                aria-label="Start after"
-                className="h-9 max-w-[40%] shrink-0 truncate rounded-lg border border-zinc-200 bg-white px-2 text-xs font-medium text-zinc-600 shadow-sm focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
-              >
-                <option value="">Start after…</option>
-                {openTasks.map((t) => (
-                  <option key={t.id} value={t.id}>{t.title}</option>
-                ))}
-              </select>
+              {openTasks.length > 0 && (
+                <select
+                  value={dependsOnTaskId}
+                  onChange={(e) => setDependsOnTaskId(e.target.value)}
+                  disabled={isCreating}
+                  aria-label="Start after"
+                  className="h-9 max-w-[10rem] shrink-0 truncate rounded-lg border border-zinc-200 bg-white px-2 text-xs font-medium text-zinc-600 shadow-sm focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                >
+                  <option value="">Start after…</option>
+                  {openTasks.map((t) => (
+                    <option key={t.id} value={t.id}>{t.title}</option>
+                  ))}
+                </select>
+              )}
             </div>
             <button
               onClick={handleSubmit}
