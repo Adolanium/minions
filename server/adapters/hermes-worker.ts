@@ -8,6 +8,7 @@ import type {
   AgentDefaults,
   AgentModelsResponse,
   AgentToolsetsResponse,
+  AnalyticsReport,
   CompactResult,
   GoalDecision,
   GoalStateSnapshot,
@@ -604,6 +605,10 @@ export class HermesWorkerAdapter implements AgentAdapter {
 
   async getMemoryPaths(): Promise<{ hermesHome: string; files: MemoryPathEntry[] }> {
     return await this.client.request<{ hermesHome: string; files: MemoryPathEntry[] }>('paths.get');
+  }
+
+  async getInsights(days = 30): Promise<AnalyticsReport> {
+    return await this.client.request<AnalyticsReport>({ type: 'insights.get', days });
   }
 
   async listScheduledTasks(includeDisabled = false, limit = 100): Promise<ScheduledTask[]> {

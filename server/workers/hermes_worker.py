@@ -30,6 +30,7 @@ from hermes_worker_utils import (
     truncate_with_ellipsis,
 )
 from hermes_sessions import (
+    insights_report,
     list_child_sessions,
     load_agent_history,
     open_session,
@@ -1647,6 +1648,8 @@ def _handle_request(request: dict[str, Any]) -> None:
             _result(request_id, _list_toolsets())
         elif request_type == "paths.get":
             _result(request_id, _memory_paths())
+        elif request_type == "insights.get":
+            _result(request_id, insights_report(request.get("days")))
         elif request_type == "scheduledTasks.list":
             _result(request_id, list_scheduled_tasks(bool(request.get("includeDisabled")), request.get("limit")))
         elif request_type == "scheduledTasks.get":

@@ -583,3 +583,147 @@ def project_session_metadata(session_id: Any) -> dict[str, Any]:
             "model": string_or_none(row.get("model")),
         }
     }
+
+
+INSIGHTS_MAX_DAYS = 365
+_INSIGHTS_WANTED_COLS = (
+    "source", "model", "started_at", "message_count", "tool_call_count",
+    "input_tokens", "output_tokens", "cache_read_tokens", "cache_write_tokens",
+    "estimated_cost_usd",
+)
+_DOW_NAMES = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+
+
+def insights_report(days: Any) -> dict[str, Any]:
+    """Aggregate token, cost, model, and activity analytics over the session store."""
+    import hermes_worker
+    from datetime import datetime, timedelta
+
+    try:
+        days_int = int(days)
+    except (TypeError, ValueError):
+        days_int = 30
+    days_int = max(1, min(days_int, INSIGHTS_MAX_DAYS))
+
+    hermes_worker._ensure_imports()
+    if hermes_worker._SessionDB is None:
+        raise WorkerError("Hermes session database is unavailable.", code="session_db_unavailable")
+    try:
+        session_db = hermes_worker._SessionDB()
+    except Exception as exc:
+        raise WorkerError(f"Could not open Hermes session store: {exc}", code="session_load_error") from exc
+
+    db_path = getattr(session_db, "db_path", None)
+    if not db_path:
+        raise WorkerError("Hermes session store path is unavailable.", code="session_load_error")
+
+    cutoff = time.time() - days_int * 86400
+    try:
+        with sqlite3.connect(f"file:{db_path}?mode=ro", uri=True) as conn:
+            conn.row_factory = sqlite3.Row
+            available = {row["name"] for row in conn.execute("PRAGMA table_info(sessions)")}
+            cols = [c for c in _INSIGHTS_WANTED_COLS if c in available]
+            if "started_at" not in cols:
+                raise WorkerError("Session store is missing expected columns.", code="session_load_error")
+            rows = [
+                dict(row)
+                for row in conn.execute(
+                    f"SELECT {', '.join(cols)} FROM sessions WHERE started_at >= ? ORDER BY started_at ASC",
+                    (cutoff,),
+                )
+            ]
+    except WorkerError:
+        raise
+    except Exception as exc:
+        raise WorkerError(f"Could not read session analytics: {exc}", code="session_load_error") from exc
+
+    totals = {
+        "sessions": 0, "messages": 0, "toolCalls": 0,
+        "inputTokens": 0, "outputTokens": 0, "cacheReadTokens": 0,
+        "cacheWriteTokens": 0, "totalTokens": 0, "estimatedCostUsd": 0.0,
+    }
+    by_model: dict[str, dict[str, Any]] = {}
+    daily: dict[str, dict[str, Any]] = {}
+    hour_counts = [0] * 24
+    dow_counts = [0] * 7
+
+    for row in rows:
+        inp = _int_field(row, "input_tokens")
+        out = _int_field(row, "output_tokens")
+        cache_read = _int_field(row, "cache_read_tokens")
+        cache_write = _int_field(row, "cache_write_tokens")
+        tokens = inp + out + cache_read + cache_write
+        cost = _float_or_none(row.get("estimated_cost_usd")) or 0.0
+        tool_calls = _int_field(row, "tool_call_count")
+        messages = _int_field(row, "message_count")
+
+        totals["sessions"] += 1
+        totals["messages"] += messages
+        totals["toolCalls"] += tool_calls
+        totals["inputTokens"] += inp
+        totals["outputTokens"] += out
+        totals["cacheReadTokens"] += cache_read
+        totals["cacheWriteTokens"] += cache_write
+        totals["totalTokens"] += tokens
+        totals["estimatedCostUsd"] += cost
+
+        model = string_or_none(row.get("model")) or "unknown"
+        display = model.split("/")[-1] if "/" in model else model
+        entry = by_model.setdefault(display, {
+            "model": display, "sessions": 0, "totalTokens": 0,
+            "inputTokens": 0, "outputTokens": 0, "toolCalls": 0, "estimatedCostUsd": 0.0,
+        })
+        entry["sessions"] += 1
+        entry["totalTokens"] += tokens
+        entry["inputTokens"] += inp
+        entry["outputTokens"] += out
+        entry["toolCalls"] += tool_calls
+        entry["estimatedCostUsd"] += cost
+
+        started_at = row.get("started_at")
+        if started_at is None:
+            continue
+        try:
+            dt = datetime.fromtimestamp(float(started_at))
+        except (TypeError, ValueError, OverflowError, OSError):
+            continue
+        key = dt.strftime("%Y-%m-%d")
+        bucket = daily.setdefault(key, {
+            "date": key, "sessions": 0, "totalTokens": 0,
+            "inputTokens": 0, "outputTokens": 0, "estimatedCostUsd": 0.0,
+        })
+        bucket["sessions"] += 1
+        bucket["totalTokens"] += tokens
+        bucket["inputTokens"] += inp
+        bucket["outputTokens"] += out
+        bucket["estimatedCostUsd"] += cost
+        hour_counts[dt.hour] += 1
+        dow_counts[dt.weekday()] += 1
+
+    today = datetime.now().date()
+    start_date = today - timedelta(days=days_int - 1)
+    if daily:
+        earliest = min(datetime.strptime(k, "%Y-%m-%d").date() for k in daily)
+        if earliest < start_date:
+            start_date = earliest
+    series: list[dict[str, Any]] = []
+    day = start_date
+    while day <= today:
+        key = day.isoformat()
+        series.append(daily.get(key) or {
+            "date": key, "sessions": 0, "totalTokens": 0,
+            "inputTokens": 0, "outputTokens": 0, "estimatedCostUsd": 0.0,
+        })
+        day += timedelta(days=1)
+
+    model_list = sorted(by_model.values(), key=lambda m: (m["totalTokens"], m["sessions"]), reverse=True)
+
+    return {
+        "days": days_int,
+        "generatedAt": _timestamp_to_ms(time.time()),
+        "totals": totals,
+        "daily": series,
+        "byModel": model_list,
+        "byHour": [{"hour": h, "count": hour_counts[h]} for h in range(24)],
+        "byDayOfWeek": [{"day": _DOW_NAMES[i], "count": dow_counts[i]} for i in range(7)],
+    }

@@ -153,6 +153,47 @@ export interface SessionMetadata {
   model: string | null;
 }
 
+export interface AnalyticsTotals {
+  sessions: number;
+  messages: number;
+  toolCalls: number;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+  totalTokens: number;
+  estimatedCostUsd: number;
+}
+
+export interface AnalyticsDay {
+  date: string;
+  sessions: number;
+  totalTokens: number;
+  inputTokens: number;
+  outputTokens: number;
+  estimatedCostUsd: number;
+}
+
+export interface AnalyticsModel {
+  model: string;
+  sessions: number;
+  totalTokens: number;
+  inputTokens: number;
+  outputTokens: number;
+  toolCalls: number;
+  estimatedCostUsd: number;
+}
+
+export interface AnalyticsReport {
+  days: number;
+  generatedAt: number;
+  totals: AnalyticsTotals;
+  daily: AnalyticsDay[];
+  byModel: AnalyticsModel[];
+  byHour: { hour: number; count: number }[];
+  byDayOfWeek: { day: string; count: number }[];
+}
+
 export interface MemoryPathEntry {
   key: string;
   label: string;

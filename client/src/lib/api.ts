@@ -4,6 +4,7 @@ import type {
   AgentRunSettings,
   AgentToolsetsResponse,
   AppVersion,
+  AnalyticsReport,
   CompactResult,
   FileCreateResponse,
   FileCreateType,
@@ -287,6 +288,10 @@ export function writeFile(path: string, content: string, expectedModifiedAt?: nu
     method: 'PUT',
     body: JSON.stringify({ path, content, expectedModifiedAt, overwrite }),
   });
+}
+
+export function fetchAnalytics(days = 30) {
+  return request<AnalyticsReport>(`/analytics?days=${days}`);
 }
 
 export function fetchMemory() {

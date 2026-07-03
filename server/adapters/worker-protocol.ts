@@ -2,6 +2,7 @@ import type {
   AgentDefaults,
   AgentModelsResponse,
   AgentToolsetsResponse,
+  AnalyticsReport,
   GoalDecision,
   GoalStateSnapshot,
   MemoryPathEntry,
@@ -22,6 +23,7 @@ export type WorkerRequest =
   | { id: string; type: 'models.list' }
   | { id: string; type: 'toolsets.list' }
   | { id: string; type: 'paths.get' }
+  | { id: string; type: 'insights.get'; days?: number }
   | { id: string; type: 'scheduledTasks.list'; includeDisabled?: boolean; limit?: number }
   | { id: string; type: 'scheduledTasks.get'; scheduledTaskId: string }
   | { id: string; type: 'scheduledTasks.create' } & ScheduledTaskInput
@@ -79,6 +81,7 @@ export type WorkerResult =
   | AgentModelsResponse
   | AgentToolsetsResponse
   | { hermesHome: string; files: MemoryPathEntry[] }
+  | AnalyticsReport
   | { scheduledTasks: ScheduledTask[] }
   | { scheduledTask: ScheduledTask | null }
   | { executed: number }
