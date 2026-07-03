@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { SquarePen, Columns3, Settings, PanelLeftClose, PanelLeft, Repeat, Sparkles, Folder, Archive, Search, BrainCircuit, BarChart3, Boxes, Plug, ScrollText } from 'lucide-react';
+import { SquarePen, Columns3, Settings, PanelLeftClose, PanelLeft, Repeat, Folder, Archive, Search, BrainCircuit, BarChart3, Boxes, Plug, ScrollText } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { isEditableTarget } from '../lib/keyboard';
 
@@ -148,14 +148,6 @@ export function Sidebar() {
             shortcut={['G', 'F']}
           />
           <SidebarLink
-            icon={<Sparkles size={18} />}
-            label="Skills"
-            to="/skills/browse"
-            active={location.pathname === '/skills' || location.pathname.startsWith('/skills/')}
-            collapsed={desktopCollapsed}
-            className="sm:hidden"
-          />
-          <SidebarLink
             icon={<BrainCircuit size={18} />}
             label="Memory"
             to="/memory"
@@ -222,14 +214,6 @@ export function Sidebar() {
             <div className="mx-3 mb-2 h-px bg-zinc-200 dark:bg-zinc-800" />
           )}
           <nav aria-label="Advanced" className="space-y-1">
-            <SidebarLink
-              icon={<Sparkles size={18} />}
-              label="Skills"
-              to="/skills/browse"
-              active={location.pathname === '/skills' || location.pathname.startsWith('/skills/')}
-              collapsed={desktopCollapsed}
-              subdued
-            />
             <SidebarLink
               icon={<BrainCircuit size={18} />}
               label="Memory"

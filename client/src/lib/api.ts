@@ -38,17 +38,11 @@ import type {
   ScheduledTaskInput,
   ScheduledTaskRun,
   ScheduledTaskRunContent,
-  SkillMeta,
-  SkillInstallResult,
-  ClawHubSkillSummary,
-  ClawHubScanResult,
   NotificationSettings,
   NotificationTestResponse,
   TaskTemplate,
   ChatRunMode,
 } from '@shared/types';
-
-export type { SkillMeta, SkillInstallResult };
 
 export type { AgentRunSettings };
 
@@ -209,73 +203,6 @@ export function createScheduledTask(input: ScheduledTaskInput) {
     method: 'POST',
     body: JSON.stringify(input),
   });
-}
-
-export function fetchSkills() {
-  return request<{ skills: SkillMeta[] }>('/skills');
-}
-
-export function fetchSkillContent(id: string) {
-  return request<{ skill: SkillMeta; content: string }>(`/skills/${encodeURIComponent(id)}/content`);
-}
-
-export function deleteSkill(id: string) {
-  return request<{ ok: boolean; skill: SkillMeta }>(`/skills/${encodeURIComponent(id)}`, {
-    method: 'DELETE',
-  });
-}
-
-export function installSkill(input: { provider?: 'clawhub'; slug: string; ownerHandle?: string | null; version?: string; force?: boolean }) {
-  return request<SkillInstallResult>('/skills/install', {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
-}
-
-export function importSkillFiles(
-  files: File[],
-  relativePathFor: (file: File) => string = fileRelativePath,
-  signal?: AbortSignal,
-) {
-  const formData = new FormData();
-
-  for (const file of files) {
-    formData.append('files', file, file.name);
-    formData.append('relativePaths', relativePathFor(file));
-  }
-
-  return request<SkillInstallResult>('/skills/import', {
-    method: 'POST',
-    body: formData,
-    signal,
-  });
-}
-
-export function searchClawHubSkills(query: string, limit = 24): Promise<ClawHubSkillSummary[]> {
-  const params = new URLSearchParams({ q: query, limit: String(limit) });
-  return request<{ skills: ClawHubSkillSummary[] }>(`/skills/registry/search?${params}`).then((res) => res.skills);
-}
-
-export function browseClawHubSkills(limit = 24): Promise<ClawHubSkillSummary[]> {
-  return request<{ skills: ClawHubSkillSummary[] }>(`/skills/registry/browse?limit=${limit}`).then((res) => res.skills);
-}
-
-export function fetchClawHubSkillContent(slug: string, version?: string | null, ownerHandle?: string | null): Promise<string> {
-  const params = new URLSearchParams();
-  if (version) params.set('version', version);
-  if (ownerHandle) params.set('ownerHandle', ownerHandle);
-  const query = params.toString();
-  const suffix = query ? `?${query}` : '';
-  return request<{ content: string }>(`/skills/registry/${encodeURIComponent(slug)}/content${suffix}`).then((res) => res.content);
-}
-
-export function fetchClawHubSkillScan(slug: string, version?: string | null, ownerHandle?: string | null): Promise<ClawHubScanResult> {
-  const params = new URLSearchParams();
-  if (version) params.set('version', version);
-  if (ownerHandle) params.set('ownerHandle', ownerHandle);
-  const query = params.toString();
-  const suffix = query ? `?${query}` : '';
-  return request<ClawHubScanResult>(`/skills/registry/${encodeURIComponent(slug)}/scan${suffix}`);
 }
 
 export const WORKSPACE_ROOT = '~/.minions/workspace';
