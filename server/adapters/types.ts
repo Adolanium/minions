@@ -1,5 +1,6 @@
 import type {
   AgentRunSettings,
+  AgentToolsetsResponse,
   CompactResult,
   ContextUsage,
   GoalDecision,
@@ -57,6 +58,8 @@ export interface AgentAdapter {
   healthCheck(): Promise<boolean>;
 
   getMessages(sessionId: string, taskId: string): Promise<TaskMessage[]>;
+
+  listToolsets(): Promise<AgentToolsetsResponse>;
 
   getSessionMetadata(sessionId: string): Promise<SessionMetadata | null>;
 

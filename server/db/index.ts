@@ -27,5 +27,6 @@ function ensureColumn(table: string, column: string, ddl: string): void {
 
 ensureColumn('tasks', 'agent_provider', 'TEXT');
 ensureColumn('tasks', 'estimated_cost_usd', 'REAL');
+ensureColumn('tasks', 'toolsets', 'TEXT');
 
 export default db;

@@ -40,17 +40,40 @@ const stmtMarkTaskViewed = db.prepare(`
     AND last_agent_response_at IS NOT NULL
     AND (last_viewed_at IS NULL OR last_viewed_at < last_agent_response_at)
 `);
+
+function parseToolsets(raw: unknown): string[] | null {
+  if (typeof raw !== 'string' || !raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : null;
+  } catch {
+    return null;
+  }
+}
+
+function serializeToolsets(value: string[] | null | undefined): string | null {
+  if (!value || value.length === 0) return null;
+  return JSON.stringify(value);
+}
+
+function toTask(row: Record<string, unknown>): Task {
+  return { ...row, toolsets: parseToolsets(row.toolsets) } as Task;
+}
+
 export function getAllTasks(status?: TaskStatus): Task[] {
-  return status ? stmtTasksByStatus.all(status) as Task[] : stmtAllTasks.all() as Task[];
+  const rows = status ? stmtTasksByStatus.all(status) : stmtAllTasks.all();
+  return (rows as Record<string, unknown>[]).map(toTask);
 }
 
 export function getTask(id: string): Task | undefined {
-  return stmtGetTask.get(id) as Task | undefined;
+  const row = stmtGetTask.get(id) as Record<string, unknown> | undefined;
+  return row ? toTask(row) : undefined;
 }
 
 export function searchTasks(query: string, limit = 20): Task[] {
   const escaped = query.replace(/[\\%_]/g, (ch) => `\\${ch}`);
-  return stmtSearchTasks.all({ pattern: `%${escaped}%`, limit }) as Task[];
+  const rows = stmtSearchTasks.all({ pattern: `%${escaped}%`, limit });
+  return (rows as Record<string, unknown>[]).map(toTask);
 }
 
 export function insertTask(task: {
@@ -79,6 +102,7 @@ export function insertTask(task: {
     last_context_used_tokens: null,
     last_context_window_tokens: null,
     estimated_cost_usd: null,
+    toolsets: null,
   };
   stmtInsertTask.run(row);
   return row as Task;
@@ -91,6 +115,7 @@ const ALLOWED_UPDATE_FIELDS = new Set<string>([
   'agent_model',
   'agent_provider',
   'reasoning_effort',
+  'toolsets',
   'last_agent_response_at',
   'last_context_used_tokens',
   'last_context_window_tokens',
@@ -106,6 +131,7 @@ type TaskUpdateFields = Pick<
   | 'agent_model'
   | 'agent_provider'
   | 'reasoning_effort'
+  | 'toolsets'
   | 'last_agent_response_at'
   | 'last_context_used_tokens'
   | 'last_context_window_tokens'
@@ -133,7 +159,7 @@ export function updateTask(
   for (const [key, value] of Object.entries(fields)) {
     if (!ALLOWED_UPDATE_FIELDS.has(key)) continue;
     fieldKeys.push(key);
-    values[key] = value ?? null;
+    values[key] = key === 'toolsets' ? serializeToolsets(value as string[] | null | undefined) : value ?? null;
   }
 
   if (fieldKeys.length === 0) return getTask(id);

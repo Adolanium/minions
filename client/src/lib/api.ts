@@ -2,6 +2,7 @@ import type {
   AgentDefaults,
   AgentModelsResponse,
   AgentRunSettings,
+  AgentToolsetsResponse,
   AppVersion,
   CompactResult,
   FileCreateResponse,
@@ -89,7 +90,7 @@ export function deleteTask(id: string) {
   return request<{ ok: boolean }>(`/tasks/${id}`, { method: 'DELETE' });
 }
 
-export function patchTask(id: string, fields: { title?: string; description?: string; status?: TaskStatus }) {
+export function patchTask(id: string, fields: { title?: string; description?: string; status?: TaskStatus; toolsets?: string[] | null }) {
   return request<{ task: Task }>(`/tasks/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(fields),
@@ -146,6 +147,10 @@ export function fetchAgentDefaults() {
 
 export function fetchAgentModels() {
   return request<AgentModelsResponse>('/agent/models');
+}
+
+export function fetchAgentToolsets() {
+  return request<AgentToolsetsResponse>('/agent/toolsets');
 }
 
 export function updateAgentDefaults(updates: { provider?: string | null; model?: string | null; reasoningEffort?: ReasoningEffort | null }) {

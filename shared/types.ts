@@ -18,6 +18,7 @@ export interface AgentRunSettings {
   model?: string | null;
   provider?: string | null;
   reasoningEffort?: ReasoningEffort | null;
+  toolsets?: string[] | null;
   mode?: ChatRunMode;
 }
 
@@ -29,6 +30,7 @@ export interface Task {
   agent_model: string | null;
   agent_provider: string | null;
   reasoning_effort: ReasoningEffort | null;
+  toolsets: string[] | null;
   created_at: number;
   updated_at: number;
   last_agent_response_at: number | null;
@@ -212,17 +214,24 @@ export interface AgentModelsResponse {
   groups: AgentModelGroup[];
 }
 
+export interface AgentToolsetsResponse {
+  toolsets: string[];
+  defaultToolsets: string[];
+}
+
 export interface TaskAgentSettings {
   task: {
     model: string | null;
     provider: string | null;
     reasoningEffort: ReasoningEffort | null;
+    toolsets: string[] | null;
   };
   defaults: AgentDefaults;
   effective: {
     model: string | null;
     provider: string | null;
     reasoningEffort: ReasoningEffort | null;
+    toolsets: string[] | null;
   };
 }
 

@@ -1,6 +1,7 @@
 import type {
   AgentDefaults,
   AgentModelsResponse,
+  AgentToolsetsResponse,
   GoalDecision,
   GoalStateSnapshot,
   ScheduledTask,
@@ -18,6 +19,7 @@ export type WorkerRequest =
   | { id: string; type: 'settings.get' }
   | { id: string; type: 'settings.set'; provider?: string | null; model?: string | null; reasoningEffort?: string | null }
   | { id: string; type: 'models.list' }
+  | { id: string; type: 'toolsets.list' }
   | { id: string; type: 'scheduledTasks.list'; includeDisabled?: boolean; limit?: number }
   | { id: string; type: 'scheduledTasks.get'; scheduledTaskId: string }
   | { id: string; type: 'scheduledTasks.create' } & ScheduledTaskInput
@@ -73,6 +75,7 @@ export type WorkerResult =
   | { ok: boolean; agentDir?: string | null; python?: string | null }
   | AgentDefaults
   | AgentModelsResponse
+  | AgentToolsetsResponse
   | { scheduledTasks: ScheduledTask[] }
   | { scheduledTask: ScheduledTask | null }
   | { executed: number }
