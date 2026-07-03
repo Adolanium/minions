@@ -24,6 +24,7 @@ import {
 import { taskRunSettings, parseRunSettingsBody } from '../agent-settings.js';
 import { TASK_AGENT_SYSTEM_PROMPT } from '../prompts/task-agent.js';
 import { isRecord, toErrorMessage } from '../errors.js';
+import { notify } from '../notifications.js';
 import type { StreamEvent } from '../adapters/types.js';
 import { CHAT_RUN_MODES, MINIONS_GOAL_MAX_TURNS, type ChatRunMode, type CompactResult, type ContextUsage, type GoalStateSnapshot, type Task } from '../../shared/types.js';
 
@@ -124,7 +125,9 @@ async function recordCompletedAgentRun(taskId: string, context: ContextUsage | n
 
   const updated = recordAgentResponse(taskId, Date.now(), context, costUsd);
   if (updated && updated.status === 'in_progress') {
-    return updateTask(taskId, { status: 'in_review' });
+    const reviewed = updateTask(taskId, { status: 'in_review' });
+    if (reviewed) notify({ kind: 'review', taskId: reviewed.id, title: reviewed.title });
+    return reviewed;
   }
   return updated;
 }
@@ -136,6 +139,10 @@ async function settleRun(taskId: string, runId: string, context: ContextUsage | 
   if (status?.status === 'done') {
     const updated = await recordCompletedAgentRun(taskId, context);
     if (updated) broadcast({ type: 'task_updated', task: updated });
+  } else if (status?.status === 'error') {
+    const task = getTask(taskId);
+    if (task) notify({ kind: 'error', taskId: task.id, title: task.title, detail: getRun(taskId)?.error });
+    touchTask(taskId);
   } else {
     touchTask(taskId);
   }

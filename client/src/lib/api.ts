@@ -28,6 +28,8 @@ import type {
   SkillInstallResult,
   ClawHubSkillSummary,
   ClawHubScanResult,
+  NotificationSettings,
+  NotificationTestResponse,
 } from '@shared/types';
 
 export type { SkillMeta, SkillInstallResult };
@@ -356,6 +358,21 @@ export async function uploadChatAttachment(
   const relativePath = `uploads/${bucketId}/${fileId}-${file.name}`;
   await uploadFileEntries(WORKSPACE_ROOT, [file], () => relativePath, signal);
   return `${WORKSPACE_ROOT}/${relativePath}`;
+}
+
+export function fetchNotificationSettings() {
+  return request<NotificationSettings>('/notifications');
+}
+
+export function updateNotificationSettings(updates: Partial<NotificationSettings>) {
+  return request<NotificationSettings>('/notifications', {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  });
+}
+
+export function sendTestNotifications() {
+  return request<NotificationTestResponse>('/notifications/test', { method: 'POST' });
 }
 
 function fileRelativePath(file: File): string {

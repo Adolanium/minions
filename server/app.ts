@@ -8,6 +8,7 @@ import { createScheduledTasksRouter } from './routes/scheduled-tasks.js';
 import { createSearchRouter } from './routes/search.js';
 import { skillsRouter } from './routes/skills.js';
 import { filesRouter } from './routes/files.js';
+import { notificationsRouter } from './routes/notifications.js';
 import { HermesWorkerAdapter } from './adapters/hermes-worker.js';
 import { initSSE, addClient, sendEvent, getWorkerUp } from './events.js';
 import { getRunStatuses } from './live-chat.js';
@@ -46,6 +47,7 @@ app.use('/api/agent', createAgentRouter(adapter));
 app.use('/api/scheduled-tasks', createScheduledTasksRouter(adapter));
 app.use('/api/search', createSearchRouter(adapter));
 app.use('/api/skills', skillsRouter);
+app.use('/api/notifications', notificationsRouter);
 
 app.use((error: unknown, _req: Request, res: Response, next: NextFunction) => {
   if (!res.headersSent && error && typeof error === 'object' && (error as { type?: string }).type === 'entity.too.large') {

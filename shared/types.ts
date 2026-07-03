@@ -369,3 +369,20 @@ export interface ClawHubScanResult {
     hasWarnings?: boolean;
   };
 }
+
+export interface NotificationSettings {
+  telegramBotToken: string | null;
+  telegramChatId: string | null;
+  webhookUrl: string | null;
+  notifyOnReview: boolean;
+  notifyOnError: boolean;
+}
+
+export interface NotificationChannelResult {
+  ok: boolean;
+  error?: string;
+}
+
+export interface NotificationTestResponse {
+  results: Partial<Record<'telegram' | 'webhook', NotificationChannelResult>>;
+}
