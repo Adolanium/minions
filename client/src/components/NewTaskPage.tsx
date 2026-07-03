@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowUp, Loader2 } from 'lucide-react';
 import { InputToolbar } from './InputToolbar';
@@ -7,6 +7,7 @@ import { TemplatesMenu } from './TemplatesMenu';
 import { createTask } from '../lib/api';
 import { useAgentConfig } from '../hooks/useAgentConfig';
 import { useFileAttachments } from '../hooks/useFileAttachments';
+import { useStore } from '../lib/store';
 import { isEditableTarget, handleChatKeyDown, toggleRunMode } from '../lib/keyboard';
 import { GOAL_MODE_PLACEHOLDER, toErrorMessage } from '../lib/format';
 import type { ChatRunMode, TaskTemplate } from '@shared/types';
@@ -28,6 +29,14 @@ export function NewTaskPage() {
   const [input, setInput] = useState(initialDraftRef.current);
   const [runMode, setRunMode] = useState<ChatRunMode>('task');
   const [isCreating, setIsCreating] = useState(false);
+  const [dependsOnTaskId, setDependsOnTaskId] = useState('');
+  const allTasks = useStore((s) => s.tasks);
+  const openTasks = useMemo(
+    () => allTasks
+      .filter((t) => t.status === 'in_progress' || t.status === 'in_review')
+      .sort((a, b) => a.title.localeCompare(b.title)),
+    [allTasks],
+  );
   const {
     defaults,
     modelGroups,
@@ -93,11 +102,16 @@ export function NewTaskPage() {
     setUploadError(null);
     try {
       const description = text || pendingFiles.map((f) => f.file.name).join(', ');
+      const message = submitWithAttachments(text);
+      if (dependsOnTaskId) {
+        await createTask(description, undefined, dependsOnTaskId, message);
+        navigate('/');
+        return;
+      }
       const { task } = await createTask(description);
-      const initialMessage = submitWithAttachments(text);
       navigate(`/tasks/${task.id}`, {
         state: {
-          initialMessage,
+          initialMessage: message,
           initialSettings: { model, provider, reasoningEffort, toolsets, mode: runMode },
         },
       });
@@ -105,7 +119,7 @@ export function NewTaskPage() {
       setUploadError(toErrorMessage(err, 'Failed to create task'));
       setIsCreating(false);
     }
-  }, [defaults, uploadBlocksSend, input, isCreating, isLoading, model, provider, navigate, pendingFiles, reasoningEffort, toolsets, runMode, submitWithAttachments, setUploadError]);
+  }, [defaults, uploadBlocksSend, input, isCreating, isLoading, model, provider, navigate, pendingFiles, reasoningEffort, toolsets, runMode, submitWithAttachments, setUploadError, dependsOnTaskId]);
 
   const handleToggleGoalMode = useCallback(() => setRunMode(toggleRunMode), []);
 
@@ -177,6 +191,18 @@ export function NewTaskPage() {
                 onToolsetsChange={setToolsets}
                 onRunModeChange={setRunMode}
               />
+              <select
+                value={dependsOnTaskId}
+                onChange={(e) => setDependsOnTaskId(e.target.value)}
+                disabled={isCreating}
+                aria-label="Start after"
+                className="h-9 max-w-[40%] shrink-0 truncate rounded-lg border border-zinc-200 bg-white px-2 text-xs font-medium text-zinc-600 shadow-sm focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+              >
+                <option value="">Start after…</option>
+                {openTasks.map((t) => (
+                  <option key={t.id} value={t.id}>{t.title}</option>
+                ))}
+              </select>
             </div>
             <button
               onClick={handleSubmit}

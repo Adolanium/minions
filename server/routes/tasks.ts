@@ -2,8 +2,9 @@ import { Router } from 'express';
 import { getAllTasks, getTask, insertTask, updateTask, deleteTask, markTaskViewed } from '../db/queries.js';
 import { broadcast } from '../events.js';
 import { adapter } from '../app.js';
+import { releaseDependentTasks } from './chat.js';
 import { ALL_TASK_STATUSES } from '../../shared/types.js';
-import type { TaskStatus } from '../../shared/types.js';
+import type { Task, TaskStatus } from '../../shared/types.js';
 
 export const tasksRouter = Router();
 
@@ -49,9 +50,23 @@ async function enrichTaskTitle(taskId: string, fallbackTitle: string, descriptio
 }
 
 tasksRouter.post('/', (req, res) => {
-  const { description, title } = req.body;
+  const { description, title, dependsOnTaskId, pendingPrompt } = req.body;
   if (!description || typeof description !== 'string') {
     return res.status(400).json({ error: 'description is required' });
+  }
+
+  let dependency: Task | undefined;
+  if (dependsOnTaskId !== undefined && dependsOnTaskId !== null) {
+    if (typeof dependsOnTaskId !== 'string') {
+      return res.status(400).json({ error: 'dependsOnTaskId must be a string' });
+    }
+    dependency = getTask(dependsOnTaskId);
+    if (!dependency) return res.status(400).json({ error: 'dependsOnTaskId does not reference an existing task' });
+  }
+
+  const openDependency = dependency && dependency.status !== 'done' ? dependency : undefined;
+  if (openDependency && (typeof pendingPrompt !== 'string' || !pendingPrompt.trim())) {
+    return res.status(400).json({ error: 'pendingPrompt is required when dependsOnTaskId is set' });
   }
 
   const userTitle = typeof title === 'string' ? title.trim() : '';
@@ -60,6 +75,8 @@ tasksRouter.post('/', (req, res) => {
     title: resolvedTitle,
     description,
     status: 'in_progress',
+    depends_on_task_id: openDependency?.id ?? null,
+    pending_prompt: openDependency ? pendingPrompt : null,
   });
   broadcast({ type: 'task_created', task });
   res.status(201).json({ task });
@@ -87,9 +104,13 @@ tasksRouter.patch('/:id', (req, res) => {
     }
   }
 
+  const previous = getTask(req.params.id);
   const updated = updateTask(req.params.id, fields);
   if (!updated) return res.status(404).json({ error: 'Task not found' });
   broadcast({ type: 'task_updated', task: updated });
+  if (updated.status === 'done' && previous?.status !== 'done') {
+    void releaseDependentTasks(updated.id);
+  }
   res.json({ task: updated });
 });
 
@@ -101,6 +122,9 @@ tasksRouter.post('/:id/viewed', (req, res) => {
 });
 
 tasksRouter.delete('/:id', (req, res) => {
+  const task = getTask(req.params.id);
+  if (!task) return res.status(404).json({ error: 'Task not found' });
+  void releaseDependentTasks(req.params.id);
   const deleted = deleteTask(req.params.id);
   if (!deleted) return res.status(404).json({ error: 'Task not found' });
   broadcast({ type: 'task_deleted', taskId: req.params.id });
@@ -113,8 +137,12 @@ tasksRouter.post('/:id/move', (req, res) => {
     return res.status(400).json({ error: `status must be one of: ${ALL_TASK_STATUSES.join(', ')}` });
   }
 
+  const previous = getTask(req.params.id);
   const updated = updateTask(req.params.id, { status });
   if (!updated) return res.status(404).json({ error: 'Task not found' });
   broadcast({ type: 'task_updated', task: updated });
+  if (updated.status === 'done' && previous?.status !== 'done') {
+    void releaseDependentTasks(updated.id);
+  }
   res.json({ task: updated });
 });
