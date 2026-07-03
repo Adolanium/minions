@@ -10,7 +10,7 @@ import { DeleteConfirmModal } from './DeleteConfirmModal';
 export function ArchivePage() {
   const upsertTask = useStore((s) => s.upsertTask);
   const removeTask = useStore((s) => s.removeTask);
-  const archivedTasks = useStore((s) => s.tasks.filter((t) => t.status === 'archived'));
+  const tasks = useStore((s) => s.tasks);
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<Task | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -32,8 +32,8 @@ export function ArchivePage() {
   }, [upsertTask]);
 
   const sorted = useMemo(
-    () => [...archivedTasks].sort((a, b) => b.updated_at - a.updated_at),
-    [archivedTasks],
+    () => tasks.filter((t) => t.status === 'archived').sort((a, b) => b.updated_at - a.updated_at),
+    [tasks],
   );
 
   function handleRestore(task: Task) {
