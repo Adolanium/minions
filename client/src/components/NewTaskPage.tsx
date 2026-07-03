@@ -147,7 +147,7 @@ export function NewTaskPage() {
         What do you need done?
       </h1>
 
-      <div className="w-full max-w-2xl">
+      <div className="w-full max-w-3xl">
         <div className="rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 shadow-sm">
           <textarea
             ref={inputRef}
