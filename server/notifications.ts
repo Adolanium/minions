@@ -30,6 +30,8 @@ function resolveSettings(raw: NotificationSettingsUpdate): NotificationSettings 
     webhookUrl,
     notifyOnReview: raw.notifyOnReview ?? channelConfigured,
     notifyOnError: raw.notifyOnError ?? channelConfigured,
+    notifyOnScheduledFailure: raw.notifyOnScheduledFailure ?? channelConfigured,
+    retryScheduledTasksOnce: raw.retryScheduledTasksOnce ?? false,
   };
 }
 
@@ -49,15 +51,16 @@ export function saveNotificationSettings(updates: NotificationSettingsUpdate): N
 }
 
 export interface NotifyEvent {
-  kind: 'review' | 'error';
-  taskId: string;
+  kind: 'review' | 'error' | 'scheduled';
+  taskId?: string;
   title: string;
   detail?: string;
 }
 
 function formatMessage(event: NotifyEvent): string {
   if (event.kind === 'review') return `Ready for review: ${event.title}`;
-  return event.detail ? `Task failed: ${event.title} (${event.detail})` : `Task failed: ${event.title}`;
+  const prefix = event.kind === 'scheduled' ? 'Scheduled task failed' : 'Task failed';
+  return event.detail ? `${prefix}: ${event.title} (${event.detail})` : `${prefix}: ${event.title}`;
 }
 
 async function sendTelegram(token: string, chatId: string, text: string): Promise<void> {
@@ -88,7 +91,11 @@ async function sendWebhook(url: string, event: NotifyEvent): Promise<void> {
 
 export function notify(event: NotifyEvent): void {
   const settings = loadNotificationSettings();
-  const enabled = event.kind === 'review' ? settings.notifyOnReview : settings.notifyOnError;
+  const enabled = event.kind === 'review'
+    ? settings.notifyOnReview
+    : event.kind === 'scheduled'
+      ? settings.notifyOnScheduledFailure
+      : settings.notifyOnError;
   if (!enabled) return;
 
   const text = formatMessage(event);

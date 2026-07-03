@@ -5,6 +5,7 @@ import { createServer, type Server } from 'node:http';
 import app, { adapter } from './app.js';
 import { mountFrontend, type FrontendCleanup } from './frontend.js';
 import { ensureHermesExternalSkillsDir } from './routes/skills.js';
+import { startScheduledTaskMonitor } from './scheduled-tasks/monitor.js';
 
 const PORT = parseInt(process.env.PORT || '6969', 10);
 const PORT_FALLBACK_ATTEMPTS = 20;
@@ -68,6 +69,7 @@ async function main() {
       error instanceof Error ? error.message : error,
     );
   }
+  startScheduledTaskMonitor(adapter);
   const boundPort = await listenWithFallback(httpServer, PORT, PORT_FALLBACK_ATTEMPTS);
 
   console.log(`Hermes Agent Mission Control running on http://localhost:${boundPort}`);

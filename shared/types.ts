@@ -376,6 +376,8 @@ export interface NotificationSettings {
   webhookUrl: string | null;
   notifyOnReview: boolean;
   notifyOnError: boolean;
+  notifyOnScheduledFailure: boolean;
+  retryScheduledTasksOnce: boolean;
 }
 
 export interface NotificationChannelResult {
