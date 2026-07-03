@@ -1,24 +1,38 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
 import { Header, HeaderProvider } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { Board } from './components/Board';
 import { NewTaskPage } from './components/NewTaskPage';
 import { TaskDetailPage } from './components/TaskDetailPage';
-import { ArchivePage } from './components/ArchivePage';
-import { SettingsPage } from './components/SettingsPage';
-import { ScheduledTasksPage } from './components/ScheduledTasksPage';
-import { SkillsPage } from './components/SkillsPage';
-import { FileBrowserPage } from './components/FileBrowserPage';
-import { MemoryPage } from './components/MemoryPage';
-import { AnalyticsPage } from './components/AnalyticsPage';
-import { ModelsPage } from './components/ModelsPage';
-import { McpPage } from './components/McpPage';
-import { LogsPage } from './components/LogsPage';
 import { SearchPalette } from './components/SearchPalette';
 import { Toaster } from 'sonner';
 import { useTasks } from './hooks/useTasks';
 import { useTheme } from './hooks/useTheme';
 import { useStore } from './lib/store';
+
+// The board and task pages are the critical path and stay in the main bundle.
+// Everything else loads on demand so the first paint isn't paying for pages
+// the user may never open.
+const ArchivePage = lazy(() => import('./components/ArchivePage').then((m) => ({ default: m.ArchivePage })));
+const SettingsPage = lazy(() => import('./components/SettingsPage').then((m) => ({ default: m.SettingsPage })));
+const ScheduledTasksPage = lazy(() => import('./components/ScheduledTasksPage').then((m) => ({ default: m.ScheduledTasksPage })));
+const SkillsPage = lazy(() => import('./components/SkillsPage').then((m) => ({ default: m.SkillsPage })));
+const FileBrowserPage = lazy(() => import('./components/FileBrowserPage').then((m) => ({ default: m.FileBrowserPage })));
+const MemoryPage = lazy(() => import('./components/MemoryPage').then((m) => ({ default: m.MemoryPage })));
+const AnalyticsPage = lazy(() => import('./components/AnalyticsPage').then((m) => ({ default: m.AnalyticsPage })));
+const ModelsPage = lazy(() => import('./components/ModelsPage').then((m) => ({ default: m.ModelsPage })));
+const McpPage = lazy(() => import('./components/McpPage').then((m) => ({ default: m.McpPage })));
+const LogsPage = lazy(() => import('./components/LogsPage').then((m) => ({ default: m.LogsPage })));
+
+function PageLoading() {
+  return (
+    <div className="flex flex-1 items-center justify-center">
+      <Loader2 size={22} className="animate-spin text-zinc-400 dark:text-zinc-500" />
+    </div>
+  );
+}
 
 function AppShell() {
   useTasks();
@@ -37,6 +51,7 @@ function AppShell() {
         <main className="flex flex-1 flex-col min-w-0 overflow-hidden bg-surface pb-[calc(3.75rem_+_env(safe-area-inset-bottom))] dark:bg-zinc-900 sm:m-2 sm:ml-0 sm:rounded-xl sm:border sm:border-zinc-200 sm:pb-0 sm:shadow-sm sm:dark:border-zinc-800">
           <HeaderProvider>
             <Header />
+            <Suspense fallback={<PageLoading />}>
             <Routes>
               <Route path="/" element={<Board />} />
               <Route path="/tasks/new" element={<NewTaskPage />} />
@@ -59,6 +74,7 @@ function AppShell() {
               <Route path="/archive" element={<ArchivePage />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Routes>
+            </Suspense>
           </HeaderProvider>
         </main>
         <SearchPalette />
