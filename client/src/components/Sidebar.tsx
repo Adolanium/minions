@@ -106,7 +106,7 @@ export function Sidebar() {
       >
         <nav
           aria-label="Primary"
-          className="flex h-full flex-1 items-center justify-around gap-1 sm:block sm:h-auto sm:flex-none sm:space-y-1"
+          className="flex h-full flex-1 items-center gap-1 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:block sm:h-auto sm:flex-none sm:space-y-1 sm:overflow-visible"
         >
           <SidebarLink
             icon={<SquarePen size={18} />}
@@ -306,7 +306,7 @@ function SidebarLink({
     <Link
       to={to}
       title={shortcut ? `${label} (${Array.isArray(shortcut) ? shortcut.join(' then ') : shortcut})` : label}
-      className={`group flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-1.5 py-1.5 text-[10px] font-medium leading-none transition-colors sm:w-full sm:flex-row sm:px-3 sm:py-2 sm:text-sm sm:leading-normal ${
+      className={`group flex min-w-[3.75rem] flex-1 flex-col items-center justify-center gap-1 rounded-lg px-1.5 py-1.5 text-[10px] font-medium leading-none transition-colors sm:min-w-0 sm:w-full sm:flex-row sm:px-3 sm:py-2 sm:text-sm sm:leading-normal ${
         collapsed ? 'sm:justify-center' : 'sm:justify-start sm:gap-3'
       } ${
         active
