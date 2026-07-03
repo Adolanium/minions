@@ -8,8 +8,8 @@ import {
   type DragStartEvent,
   type DragEndEvent,
 } from '@dnd-kit/core';
-import { AlertTriangle, Wrench } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, Search, Wrench } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { ScheduledTask, Task, TaskStatus } from '@shared/types';
 import { TASK_STATUSES } from '@shared/types';
@@ -20,6 +20,7 @@ import { buildScheduledTaskFixDraft } from '../lib/scheduledTaskFix';
 import { relativeTime } from '../lib/schedule';
 import { Column } from './Column';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
+import { usePageHeader, type PageHeaderConfig } from './Header';
 import { TaskCardOverlay } from './TaskCard';
 
 const dropAnimation = {
@@ -97,14 +98,48 @@ export function Board() {
   const upsertTask = useStore((s) => s.upsertTask);
   const removeTask = useStore((s) => s.removeTask);
   const [scheduledTasks, setScheduledTasks] = useState<ScheduledTask[]>([]);
+  const [filter, setFilter] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const grouped = useMemo(() => {
+    const q = filter.trim().toLowerCase();
+    const matchesFilter = (t: Task) =>
+      !q || t.title.toLowerCase().includes(q) || (t.description ?? '').toLowerCase().includes(q);
     const buckets: Record<TaskStatus, Task[]> = { in_progress: [], in_review: [], done: [], archived: [] };
     for (const t of tasks) {
-      if (t.status in buckets) buckets[t.status].push(t);
+      if (t.status in buckets && matchesFilter(t)) buckets[t.status].push(t);
     }
     for (const s of TASK_STATUSES) buckets[s].sort((a, b) => b.updated_at - a.updated_at);
     return buckets;
-  }, [tasks]);
+  }, [tasks, filter]);
+
+  const headerActions = useMemo(() => (
+    <div className="relative">
+      <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
+      <input
+        ref={searchInputRef}
+        type="text"
+        value={filter}
+        onChange={(e) => setFilter(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') {
+            e.stopPropagation();
+            setFilter('');
+            (e.target as HTMLInputElement).blur();
+          }
+        }}
+        placeholder="Filter tasks..."
+        aria-label="Filter tasks"
+        className="h-8 w-44 rounded-md border border-zinc-200 bg-white pl-8 pr-2.5 text-sm text-zinc-800 placeholder-zinc-400 outline-none transition-colors focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder-zinc-500 dark:focus:border-zinc-500 sm:w-56"
+      />
+    </div>
+  ), [filter]);
+
+  const headerConfig = useMemo<PageHeaderConfig>(() => ({
+    crumbs: [{ label: 'Tasks' }],
+    actions: headerActions,
+  }), [headerActions]);
+
+  usePageHeader(headerConfig);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [deleteAllStatus, setDeleteAllStatus] = useState<TaskStatus | null>(null);
   const [bulkDeleteError, setBulkDeleteError] = useState<string | null>(null);

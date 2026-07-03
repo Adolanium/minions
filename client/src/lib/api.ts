@@ -13,6 +13,7 @@ import type {
   FileUploadResponse,
   FileWriteResponse,
   ContextUsage,
+  SearchResponse,
   SessionMetadata,
   Task,
   TaskAgentSettings,
@@ -112,6 +113,10 @@ export function fetchMessages(taskId: string) {
 
 export function fetchSession(taskId: string) {
   return request<{ session: SessionMetadata | null }>(`/tasks/${taskId}/session`);
+}
+
+export function fetchSearch(query: string) {
+  return request<SearchResponse>(`/search?q=${encodeURIComponent(query)}`);
 }
 
 export function fetchHealth() {

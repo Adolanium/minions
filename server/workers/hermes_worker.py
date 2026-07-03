@@ -30,6 +30,7 @@ from hermes_sessions import (
     open_session,
     project_session_messages,
     project_session_metadata,
+    search_sessions,
 )
 from hermes_scheduled_tasks import (
     create_scheduled_task,
@@ -1581,6 +1582,8 @@ def _handle_request(request: dict[str, Any]) -> None:
             _result(request_id, project_session_messages(request.get("sessionId"), request.get("taskId")))
         elif request_type == "session.get":
             _result(request_id, project_session_metadata(request.get("sessionId")))
+        elif request_type == "session.search":
+            _result(request_id, search_sessions(request.get("query"), request.get("limit")))
         elif request_type == "goal.status":
             _result(request_id, _goal_status(request))
         elif request_type == "goal.set":

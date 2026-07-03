@@ -5,6 +5,7 @@ import { tasksRouter } from './routes/tasks.js';
 import { chatRouter } from './routes/chat.js';
 import { createAgentRouter, createTaskAgentSettingsRouter } from './routes/agent.js';
 import { createScheduledTasksRouter } from './routes/scheduled-tasks.js';
+import { createSearchRouter } from './routes/search.js';
 import { skillsRouter } from './routes/skills.js';
 import { filesRouter } from './routes/files.js';
 import { HermesWorkerAdapter } from './adapters/hermes-worker.js';
@@ -42,6 +43,7 @@ app.use('/api/tasks', createTaskAgentSettingsRouter(adapter));
 app.use('/api/tasks', chatRouter);
 app.use('/api/agent', createAgentRouter(adapter));
 app.use('/api/scheduled-tasks', createScheduledTasksRouter(adapter));
+app.use('/api/search', createSearchRouter(adapter));
 app.use('/api/skills', skillsRouter);
 
 app.use((error: unknown, _req: Request, res: Response, next: NextFunction) => {

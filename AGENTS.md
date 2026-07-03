@@ -149,7 +149,7 @@ Chat stream completes (done event in consumeChatRun)
 
 The Python worker communicates via JSONL (one JSON object per line) over stdin/stdout.
 
-**Request types**: `health`, `chat`, `session.messages.get`, `session.get`, `goal.status`, `goal.set`, `goal.pause`, `goal.resume`, `goal.clear`, `goal.evaluate`, `settings.get`, `settings.set`, `models.list`, `title.generate`, `session.compress`, `scheduledTasks.list`, `scheduledTasks.get`, `scheduledTasks.create`, `scheduledTasks.update`, `scheduledTasks.pause`, `scheduledTasks.resume`, `scheduledTasks.run`, `scheduledTasks.remove`, `scheduledTasks.tick`
+**Request types**: `health`, `chat`, `session.messages.get`, `session.get`, `session.search`, `goal.status`, `goal.set`, `goal.pause`, `goal.resume`, `goal.clear`, `goal.evaluate`, `settings.get`, `settings.set`, `models.list`, `title.generate`, `session.compress`, `scheduledTasks.list`, `scheduledTasks.get`, `scheduledTasks.create`, `scheduledTasks.update`, `scheduledTasks.pause`, `scheduledTasks.resume`, `scheduledTasks.run`, `scheduledTasks.remove`, `scheduledTasks.tick`
 
 **Stream events** (emitted during `chat` requests):
 
