@@ -38,6 +38,18 @@ export interface Task {
   estimated_cost_usd: number | null;
 }
 
+export interface TaskTemplate {
+  id: string;
+  name: string;
+  prompt: string;
+  agent_model: string | null;
+  agent_provider: string | null;
+  reasoning_effort: ReasoningEffort | null;
+  run_mode: ChatRunMode | null;
+  created_at: number;
+  updated_at: number;
+}
+
 export interface TaskMessage {
   id: string;
   task_id: string;

@@ -15,3 +15,15 @@ CREATE TABLE IF NOT EXISTS tasks (
 );
 
 CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+
+CREATE TABLE IF NOT EXISTS templates (
+  id                TEXT PRIMARY KEY,
+  name              TEXT NOT NULL,
+  prompt            TEXT NOT NULL,
+  agent_model       TEXT,
+  agent_provider    TEXT,
+  reasoning_effort  TEXT,
+  run_mode          TEXT,
+  created_at        INTEGER NOT NULL,
+  updated_at        INTEGER NOT NULL
+);

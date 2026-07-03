@@ -31,6 +31,8 @@ import type {
   ClawHubScanResult,
   NotificationSettings,
   NotificationTestResponse,
+  TaskTemplate,
+  ChatRunMode,
 } from '@shared/types';
 
 export type { SkillMeta, SkillInstallResult };
@@ -382,6 +384,42 @@ export function updateNotificationSettings(updates: Partial<NotificationSettings
 
 export function sendTestNotifications() {
   return request<NotificationTestResponse>('/notifications/test', { method: 'POST' });
+}
+
+export function fetchTemplates() {
+  return request<{ templates: TaskTemplate[] }>('/templates');
+}
+
+export function createTemplate(input: {
+  name: string;
+  prompt: string;
+  agent_model?: string | null;
+  agent_provider?: string | null;
+  reasoning_effort?: ReasoningEffort | null;
+  run_mode?: ChatRunMode | null;
+}) {
+  return request<{ template: TaskTemplate }>('/templates', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateTemplate(id: string, fields: Partial<{
+  name: string;
+  prompt: string;
+  agent_model: string | null;
+  agent_provider: string | null;
+  reasoning_effort: ReasoningEffort | null;
+  run_mode: ChatRunMode | null;
+}>) {
+  return request<{ template: TaskTemplate }>(`/templates/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(fields),
+  });
+}
+
+export function deleteTemplate(id: string) {
+  return request<{ ok: boolean }>(`/templates/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }
 
 function fileRelativePath(file: File): string {

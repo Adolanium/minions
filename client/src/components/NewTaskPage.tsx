@@ -3,12 +3,13 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowUp, Loader2 } from 'lucide-react';
 import { InputToolbar } from './InputToolbar';
 import { AttachButton, AttachDropOverlay, AttachmentTray, UploadErrorBar } from './ChatAttachments';
+import { TemplatesMenu } from './TemplatesMenu';
 import { createTask } from '../lib/api';
 import { useAgentConfig } from '../hooks/useAgentConfig';
 import { useFileAttachments } from '../hooks/useFileAttachments';
 import { isEditableTarget, handleChatKeyDown, toggleRunMode } from '../lib/keyboard';
 import { GOAL_MODE_PLACEHOLDER, toErrorMessage } from '../lib/format';
-import type { ChatRunMode } from '@shared/types';
+import type { ChatRunMode, TaskTemplate } from '@shared/types';
 
 type NewTaskLocationState = {
   draft?: string;
@@ -94,6 +95,15 @@ export function NewTaskPage() {
 
   const handleToggleGoalMode = useCallback(() => setRunMode(toggleRunMode), []);
 
+  const handleApplyTemplate = useCallback((template: TaskTemplate) => {
+    setInput(template.prompt);
+    if (template.agent_model) setModel(template.agent_model);
+    if (template.agent_provider) setProvider(template.agent_provider);
+    if (template.reasoning_effort) setReasoningEffort(template.reasoning_effort);
+    if (template.run_mode) setRunMode(template.run_mode);
+    inputRef.current?.focus();
+  }, [setModel, setProvider, setReasoningEffort]);
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => handleChatKeyDown(e, handleSubmit, {
       onGoalToggle: handleToggleGoalMode,
@@ -126,6 +136,13 @@ export function NewTaskPage() {
           <div className="flex items-center justify-between gap-2 px-3 pb-3 sm:gap-3 sm:px-4">
             <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
               <AttachButton onFiles={addFiles} disabled={isCreating} />
+              <TemplatesMenu
+                disabled={isCreating}
+                compactMobile
+                canSave={Boolean(input.trim())}
+                draft={{ prompt: input, model, provider, reasoningEffort, runMode }}
+                onApply={handleApplyTemplate}
+              />
               <InputToolbar
                 model={model}
                 provider={provider}
