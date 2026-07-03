@@ -7,6 +7,7 @@ import type {
   ScheduledTaskInput,
   SessionMetadata,
   SessionSearchMatch,
+  SubagentSession,
   TaskMessage,
   ContextUsage,
 } from '../../shared/types.js';
@@ -29,6 +30,7 @@ export type WorkerRequest =
   | { id: string; type: 'session.messages.get'; sessionId: string; taskId?: string }
   | { id: string; type: 'session.get'; sessionId: string }
   | { id: string; type: 'session.search'; query: string; limit?: number }
+  | { id: string; type: 'session.children'; sessionId: string }
   | { id: string; type: 'goal.status'; sessionId: string }
   | { id: string; type: 'goal.set'; sessionId: string; goal: string; maxTurns?: number | null }
   | { id: string; type: 'goal.pause'; sessionId: string; reason?: string }
@@ -77,6 +79,7 @@ export type WorkerResult =
   | { messages: TaskMessage[] }
   | { session: SessionMetadata | null }
   | { matches: SessionSearchMatch[] }
+  | { children: SubagentSession[] }
   | { goal: GoalStateSnapshot | null }
   | { cleared: boolean }
   | { interrupted: boolean }

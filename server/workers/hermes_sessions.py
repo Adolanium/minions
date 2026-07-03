@@ -482,6 +482,80 @@ def search_sessions(query: Any, limit: Any) -> dict[str, Any]:
     return {"matches": matches}
 
 
+CHILD_SESSION_MAX_RESULTS = 50
+CHILD_SESSION_MAX_DEPTH = 3
+
+
+def _optional_timestamp_to_ms(value: Any) -> int | None:
+    if value is None:
+        return None
+    return _timestamp_to_ms(value)
+
+
+def list_child_sessions(session_id: Any) -> dict[str, Any]:
+    session_id = string_or_none(session_id)
+    if not session_id:
+        raise WorkerError("Session ID is required.", code="bad_request")
+
+    session_db, _ = open_session(session_id, resolve_live=False)
+    db_path = getattr(session_db, "db_path", None)
+    if not db_path:
+        return {"children": []}
+
+    try:
+        with sqlite3.connect(str(db_path)) as conn:
+            conn.row_factory = sqlite3.Row
+            rows = [
+                dict(row)
+                for row in conn.execute(
+                    """
+                    WITH RECURSIVE descendants(id, depth) AS (
+                      SELECT id, 0
+                      FROM sessions
+                      WHERE id = ?
+                      UNION ALL
+                      SELECT child.id, descendants.depth + 1
+                      FROM sessions child
+                      JOIN descendants ON child.parent_session_id = descendants.id
+                      WHERE descendants.depth < ?
+                    )
+                    SELECT s.id, s.parent_session_id, d.depth, s.title, s.model, s.started_at,
+                           s.ended_at, s.end_reason, s.message_count, s.tool_call_count,
+                           s.input_tokens, s.output_tokens, s.estimated_cost_usd
+                    FROM descendants d
+                    JOIN sessions s ON s.id = d.id
+                    WHERE d.depth > 0
+                    ORDER BY d.depth ASC, s.started_at ASC
+                    """,
+                    (session_id, CHILD_SESSION_MAX_DEPTH),
+                ).fetchall()
+            ]
+    except Exception as exc:
+        raise WorkerError(f"Could not load child sessions: {exc}", code="session_load_error") from exc
+
+    capped = rows[:CHILD_SESSION_MAX_RESULTS]
+    capped.sort(key=lambda row: row.get("started_at") or 0)
+
+    children = [
+        {
+            "id": str(row.get("id")),
+            "parent_id": string_or_none(row.get("parent_session_id")),
+            "depth": int(row.get("depth") or 0),
+            "title": string_or_none(row.get("title")),
+            "model": string_or_none(row.get("model")),
+            "started_at": _timestamp_to_ms(row.get("started_at")),
+            "ended_at": _optional_timestamp_to_ms(row.get("ended_at")),
+            "end_reason": string_or_none(row.get("end_reason")),
+            "message_count": _int_field(row, "message_count"),
+            "tool_call_count": _int_field(row, "tool_call_count"),
+            "total_tokens": _int_field(row, "input_tokens") + _int_field(row, "output_tokens"),
+            "estimated_cost_usd": _float_or_none(row.get("estimated_cost_usd")),
+        }
+        for row in capped
+    ]
+    return {"children": children}
+
+
 def project_session_metadata(session_id: Any) -> dict[str, Any]:
     session_id = string_or_none(session_id)
     if not session_id:
