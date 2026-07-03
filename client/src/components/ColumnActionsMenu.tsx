@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Trash2 } from 'lucide-react';
+import { Archive, Trash2 } from 'lucide-react';
 
 interface Props {
   x: number;
@@ -8,10 +8,11 @@ interface Props {
   columnLabel: string;
   taskCount: number;
   onClose: () => void;
+  onArchiveAll: () => void;
   onDeleteAll: () => void;
 }
 
-export function ColumnActionsMenu({ x, y, columnLabel, taskCount, onClose, onDeleteAll }: Props) {
+export function ColumnActionsMenu({ x, y, columnLabel, taskCount, onClose, onArchiveAll, onDeleteAll }: Props) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ x, y });
   const hasTasks = taskCount > 0;
@@ -42,6 +43,12 @@ export function ColumnActionsMenu({ x, y, columnLabel, taskCount, onClose, onDel
     };
   }, [onClose]);
 
+  function handleArchiveAll() {
+    if (!hasTasks) return;
+    onArchiveAll();
+    onClose();
+  }
+
   function handleDeleteAll() {
     if (!hasTasks) return;
     onDeleteAll();
@@ -55,6 +62,17 @@ export function ColumnActionsMenu({ x, y, columnLabel, taskCount, onClose, onDel
       style={{ left: pos.x, top: pos.y }}
       className="fixed z-50 min-w-[220px] py-1 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-700 shadow-xl animate-in fade-in zoom-in-95 duration-100"
     >
+      <button
+        type="button"
+        role="menuitem"
+        onClick={handleArchiveAll}
+        disabled={!hasTasks}
+        className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-left transition-colors disabled:cursor-not-allowed disabled:text-zinc-400 dark:disabled:text-zinc-600 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:hover:bg-transparent"
+      >
+        <Archive size={14} />
+        {hasTasks ? `Archive all in ${columnLabel}...` : 'No tasks to archive'}
+      </button>
+      <div className="my-1 border-t border-zinc-200 dark:border-zinc-800" />
       <button
         type="button"
         role="menuitem"

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { SquarePen, Columns3, Settings, PanelLeftClose, PanelLeft, Repeat, Sparkles, Folder } from 'lucide-react';
+import { SquarePen, Columns3, Settings, PanelLeftClose, PanelLeft, Repeat, Sparkles, Folder, Archive } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { isEditableTarget } from '../lib/keyboard';
 
@@ -142,6 +142,14 @@ export function Sidebar() {
             className="sm:hidden"
           />
           <SidebarLink
+            icon={<Archive size={18} />}
+            label="Archive"
+            to="/archive"
+            active={isActive('/archive')}
+            collapsed={desktopCollapsed}
+            className="sm:hidden"
+          />
+          <SidebarLink
             icon={<Settings size={18} />}
             label="Settings"
             to="/settings"
@@ -172,6 +180,14 @@ export function Sidebar() {
         </div>
 
         <nav aria-label="System" className="mt-auto hidden pb-3 sm:block sm:space-y-1">
+          <SidebarLink
+            icon={<Archive size={18} />}
+            label="Archive"
+            to="/archive"
+            active={isActive('/archive')}
+            collapsed={desktopCollapsed}
+            subdued
+          />
           <SidebarLink
             icon={<Settings size={18} />}
             label="Settings"

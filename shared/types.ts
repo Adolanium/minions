@@ -1,5 +1,6 @@
 export const TASK_STATUSES = ['in_progress', 'in_review', 'done'] as const;
-export type TaskStatus = (typeof TASK_STATUSES)[number];
+export const ALL_TASK_STATUSES = [...TASK_STATUSES, 'archived'] as const;
+export type TaskStatus = (typeof ALL_TASK_STATUSES)[number];
 
 export const REASONING_EFFORTS = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh'] as const;
 export type ReasoningEffort = (typeof REASONING_EFFORTS)[number];

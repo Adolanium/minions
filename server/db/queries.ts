@@ -7,7 +7,7 @@ import {
   type ContextUsage,
 } from '../../shared/types.js';
 
-const stmtAllTasks = db.prepare('SELECT * FROM tasks ORDER BY updated_at DESC');
+const stmtAllTasks = db.prepare("SELECT * FROM tasks WHERE status != 'archived' ORDER BY updated_at DESC");
 const stmtTasksByStatus = db.prepare('SELECT * FROM tasks WHERE status = ? ORDER BY updated_at DESC');
 const stmtGetTask = db.prepare('SELECT * FROM tasks WHERE id = ?');
 const stmtInsertTask = db.prepare(`

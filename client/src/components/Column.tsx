@@ -13,10 +13,11 @@ interface ColumnProps {
   tasks: Task[];
   taskRuns: Map<string, TaskRunState>;
   isLast?: boolean;
+  onRequestArchiveAll: (status: TaskStatus) => void;
   onRequestDeleteAll: (status: TaskStatus) => void;
 }
 
-export function Column({ status, tasks, taskRuns, isLast = false, onRequestDeleteAll }: ColumnProps) {
+export function Column({ status, tasks, taskRuns, isLast = false, onRequestArchiveAll, onRequestDeleteAll }: ColumnProps) {
   const { label } = STATUS_META[status];
   const { setNodeRef, isOver } = useDroppable({ id: status });
   const navigate = useNavigate();
@@ -100,6 +101,7 @@ export function Column({ status, tasks, taskRuns, isLast = false, onRequestDelet
           columnLabel={label}
           taskCount={tasks.length}
           onClose={() => setMenuPosition(null)}
+          onArchiveAll={() => onRequestArchiveAll(status)}
           onDeleteAll={() => onRequestDeleteAll(status)}
         />
       )}

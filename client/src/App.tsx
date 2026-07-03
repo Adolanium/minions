@@ -4,6 +4,7 @@ import { Sidebar } from './components/Sidebar';
 import { Board } from './components/Board';
 import { NewTaskPage } from './components/NewTaskPage';
 import { TaskDetailPage } from './components/TaskDetailPage';
+import { ArchivePage } from './components/ArchivePage';
 import { SettingsPage } from './components/SettingsPage';
 import { ScheduledTasksPage } from './components/ScheduledTasksPage';
 import { SkillsPage } from './components/SkillsPage';
@@ -36,6 +37,7 @@ function AppShell() {
             <Route path="/skills" element={<Navigate to="/skills/browse" replace />} />
             <Route path="/skills/:tab" element={<SkillsPage />} />
             <Route path="/files" element={<FileBrowserPage />} />
+            <Route path="/archive" element={<ArchivePage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Routes>
         </HeaderProvider>

@@ -5,6 +5,7 @@ interface Props {
   title?: string;
   body?: string;
   confirmLabel?: string;
+  confirmingLabel?: string;
   isConfirming?: boolean;
   error?: string | null;
 }
@@ -16,6 +17,7 @@ export function DeleteConfirmModal({
   title = 'Delete task',
   body = 'This removes the task from Minions. The Hermes session history remains in Hermes.',
   confirmLabel = 'Delete',
+  confirmingLabel = 'Deleting...',
   isConfirming = false,
   error = null,
 }: Props) {
@@ -45,7 +47,7 @@ export function DeleteConfirmModal({
             disabled={isConfirming}
             className="px-3.5 py-1.5 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
           >
-            {isConfirming ? 'Deleting...' : confirmLabel}
+            {isConfirming ? confirmingLabel : confirmLabel}
           </button>
         </div>
       </div>

@@ -98,7 +98,7 @@ export function Board() {
   const removeTask = useStore((s) => s.removeTask);
   const [scheduledTasks, setScheduledTasks] = useState<ScheduledTask[]>([]);
   const grouped = useMemo(() => {
-    const buckets: Record<TaskStatus, Task[]> = { in_progress: [], in_review: [], done: [] };
+    const buckets: Record<TaskStatus, Task[]> = { in_progress: [], in_review: [], done: [], archived: [] };
     for (const t of tasks) {
       if (t.status in buckets) buckets[t.status].push(t);
     }
@@ -109,6 +109,9 @@ export function Board() {
   const [deleteAllStatus, setDeleteAllStatus] = useState<TaskStatus | null>(null);
   const [bulkDeleteError, setBulkDeleteError] = useState<string | null>(null);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [archiveAllStatus, setArchiveAllStatus] = useState<TaskStatus | null>(null);
+  const [bulkArchiveError, setBulkArchiveError] = useState<string | null>(null);
+  const [isBulkArchiving, setIsBulkArchiving] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -193,10 +196,59 @@ export function Board() {
     }
   }
 
+  function handleRequestArchiveAll(status: TaskStatus) {
+    setBulkArchiveError(null);
+    setArchiveAllStatus(status);
+  }
+
+  function handleCancelArchiveAll() {
+    if (isBulkArchiving) return;
+    setArchiveAllStatus(null);
+    setBulkArchiveError(null);
+  }
+
+  async function handleConfirmArchiveAll() {
+    if (!archiveAllStatus || isBulkArchiving) return;
+
+    const targets = grouped[archiveAllStatus];
+    if (targets.length === 0) {
+      handleCancelArchiveAll();
+      return;
+    }
+
+    setIsBulkArchiving(true);
+    setBulkArchiveError(null);
+    try {
+      const results = await Promise.allSettled(targets.map((task) => moveTask(task.id, 'archived')));
+      let failed = 0;
+
+      results.forEach((result) => {
+        if (result.status === 'fulfilled') {
+          upsertTask(result.value.task);
+        } else {
+          failed += 1;
+        }
+      });
+
+      if (failed === 0) {
+        setArchiveAllStatus(null);
+      } else {
+        setBulkArchiveError(`Failed to archive ${failed} task${failed === 1 ? '' : 's'}.`);
+      }
+    } finally {
+      setIsBulkArchiving(false);
+    }
+  }
+
   const deleteAllTasks = deleteAllStatus ? grouped[deleteAllStatus] : [];
   const deleteAllLabel = deleteAllStatus ? STATUS_META[deleteAllStatus].label : '';
   const deleteAllCount = deleteAllTasks.length;
   const deleteAllTaskWord = deleteAllCount === 1 ? 'task' : 'tasks';
+
+  const archiveAllTasks = archiveAllStatus ? grouped[archiveAllStatus] : [];
+  const archiveAllLabel = archiveAllStatus ? STATUS_META[archiveAllStatus].label : '';
+  const archiveAllCount = archiveAllTasks.length;
+  const archiveAllTaskWord = archiveAllCount === 1 ? 'task' : 'tasks';
 
   return (
     <DndContext
@@ -215,6 +267,7 @@ export function Board() {
               tasks={grouped[status]}
               taskRuns={taskRuns}
               isLast={index === TASK_STATUSES.length - 1}
+              onRequestArchiveAll={handleRequestArchiveAll}
               onRequestDeleteAll={handleRequestDeleteAll}
             />
           ))}
@@ -241,6 +294,22 @@ export function Board() {
           error={bulkDeleteError}
           onConfirm={handleConfirmDeleteAll}
           onCancel={handleCancelDeleteAll}
+        />
+      )}
+      {archiveAllStatus && (
+        <DeleteConfirmModal
+          title={`Archive ${archiveAllCount} ${archiveAllLabel} ${archiveAllTaskWord}?`}
+          body={
+            archiveAllCount === 1
+              ? `This archives the task in ${archiveAllLabel}. You can restore it later from the Archive page.`
+              : `This archives every task in ${archiveAllLabel}. You can restore them later from the Archive page.`
+          }
+          confirmLabel={archiveAllCount === 1 ? 'Archive task' : `Archive ${archiveAllCount} tasks`}
+          confirmingLabel="Archiving..."
+          isConfirming={isBulkArchiving}
+          error={bulkArchiveError}
+          onConfirm={handleConfirmArchiveAll}
+          onCancel={handleCancelArchiveAll}
         />
       )}
     </DndContext>
