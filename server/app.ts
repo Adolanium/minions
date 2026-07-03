@@ -1,6 +1,7 @@
 import express from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import { tasksRouter } from './routes/tasks.js';
 import { templatesRouter } from './routes/templates.js';
 import { chatRouter } from './routes/chat.js';
@@ -23,6 +24,16 @@ import { getRunStatuses } from './live-chat.js';
 import { getAppVersion } from './version.js';
 
 const app = express();
+
+// Compress responses (the client bundle alone is multiple megabytes), but
+// never SSE streams — buffering event-stream bodies would stall live updates.
+app.use(compression({
+  filter: (req, res) => {
+    const contentType = String(res.getHeader('Content-Type') ?? '');
+    if (contentType.includes('text/event-stream')) return false;
+    return compression.filter(req, res);
+  },
+}));
 
 app.use(cors());
 

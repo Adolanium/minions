@@ -32,7 +32,15 @@ export async function mountFrontend(app: Express, httpServer: Server): Promise<F
     throw new Error(`Client build not found at ${CLIENT_INDEX}. Run npm run build first.`);
   }
 
-  app.use(express.static(CLIENT_DIST_DIR));
+  app.use(express.static(CLIENT_DIST_DIR, {
+    setHeaders: (res, filePath) => {
+      // Vite content-hashes everything under assets/, so those files can be
+      // cached forever. index.html keeps the default revalidation behavior.
+      if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      }
+    },
+  }));
   app.get('*', (_req, res) => {
     res.sendFile(CLIENT_INDEX);
   });
