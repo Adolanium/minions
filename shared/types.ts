@@ -196,6 +196,20 @@ export interface AnalyticsReport {
   byDayOfWeek: { day: string; count: number }[];
 }
 
+export interface LogFileEntry {
+  name: string;
+  size: number;
+  modifiedAt: number;
+}
+
+export interface LogTailResponse {
+  name: string;
+  size: number;
+  modifiedAt: number;
+  lines: string[];
+  truncated: boolean;
+}
+
 export interface GitStatusResponse {
   repo: boolean;
   branch?: string;

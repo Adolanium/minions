@@ -21,6 +21,8 @@ import type {
   FileUploadResponse,
   FileWriteResponse,
   GitStatusResponse,
+  LogFileEntry,
+  LogTailResponse,
   MemoryFilesResponse,
   MemorySaveResponse,
   ContextUsage,
@@ -284,6 +286,14 @@ export function listFiles(path = WORKSPACE_ROOT) {
 
 export function readFile(path: string) {
   return request<FileReadResponse>(`/files/read?path=${encodeURIComponent(path)}`);
+}
+
+export function fetchLogFiles() {
+  return request<{ files: LogFileEntry[] }>('/logs');
+}
+
+export function fetchLogTail(name: string, lines: number) {
+  return request<LogTailResponse>(`/logs/tail?name=${encodeURIComponent(name)}&lines=${lines}`);
 }
 
 export function fetchGitStatus(path: string) {
