@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { deleteTask, patchTask, moveTask, markTaskViewed, fetchSession, fetchSubagents } from '../lib/api';
 import { TASK_STATUSES } from '@shared/types';
 import { STATUS_META } from '../lib/constants';
-import { formatCost, timeAgo } from '../lib/format';
+import { formatCost, formatTokenCount, timeAgo } from '../lib/format';
 import { isEditableTarget } from '../lib/keyboard';
 import { TaskChat } from './TaskChat';
 import { RenameReveal, useRenameAnimation } from './RenameTitle';
@@ -32,6 +32,7 @@ export function TaskDetailPage() {
 
   const [titleDraft, setTitleDraft] = useState('');
   const [sessionCost, setSessionCost] = useState<number | null>(null);
+  const [sessionTokens, setSessionTokens] = useState<number | null>(null);
   const [subagentCount, setSubagentCount] = useState(0);
   const [showSubagents, setShowSubagents] = useState(false);
   const wasRunningRef = useRef(false);
@@ -52,10 +53,12 @@ export function TaskDetailPage() {
     let cancelled = false;
     fetchSession(task.id)
       .then(({ session }) => {
-        if (!cancelled) setSessionCost(typeof session?.estimated_cost_usd === 'number' ? session.estimated_cost_usd : null);
+        if (cancelled) return;
+        setSessionCost(typeof session?.estimated_cost_usd === 'number' ? session.estimated_cost_usd : null);
+        setSessionTokens(session ? session.input_tokens + session.output_tokens : null);
       })
       .catch(() => {
-        if (!cancelled) setSessionCost(null);
+        if (!cancelled) { setSessionCost(null); setSessionTokens(null); }
       });
     return () => { cancelled = true; };
   }, [task?.id]);
@@ -63,7 +66,10 @@ export function TaskDetailPage() {
   useEffect(() => {
     if (wasRunningRef.current && !isRunning && task) {
       fetchSession(task.id)
-        .then(({ session }) => setSessionCost(typeof session?.estimated_cost_usd === 'number' ? session.estimated_cost_usd : null))
+        .then(({ session }) => {
+          setSessionCost(typeof session?.estimated_cost_usd === 'number' ? session.estimated_cost_usd : null);
+          setSessionTokens(session ? session.input_tokens + session.output_tokens : null);
+        })
         .catch(() => {});
       fetchSubagents(task.id)
         .then(({ subagents }) => setSubagentCount(subagents.length))
@@ -285,6 +291,12 @@ export function TaskDetailPage() {
               {sessionCost != null && sessionCost > 0 && (
                 <span className="text-xs text-zinc-400 dark:text-zinc-500 shrink-0">
                   {formatCost(sessionCost)}
+                </span>
+              )}
+
+              {sessionTokens != null && sessionTokens > 0 && (
+                <span className="text-xs text-zinc-400 dark:text-zinc-500 shrink-0">
+                  {formatTokenCount(sessionTokens)} tok
                 </span>
               )}
 
