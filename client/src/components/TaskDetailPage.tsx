@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { MoreHorizontal, Trash2, Loader2, Pencil, Check, Archive, Users } from 'lucide-react';
+import { MoreHorizontal, Trash2, Loader2, Pencil, Check, Archive, Users, Download } from 'lucide-react';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { SubagentsModal } from './SubagentsModal';
 import { StatusIcon } from './StatusIcon';
@@ -384,6 +384,19 @@ export function TaskDetailPage() {
                         </button>
                       </>
                     )}
+                    <div className="my-1 border-t border-zinc-200 dark:border-zinc-800" />
+                    {(['md', 'json'] as const).map((format) => (
+                      <a
+                        key={format}
+                        href={`/api/tasks/${task.id}/export?format=${format}`}
+                        download
+                        onClick={() => setShowMenu(false)}
+                        className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-left"
+                      >
+                        <Download size={14} />
+                        Export as {format === 'md' ? 'Markdown' : 'JSON'}
+                      </a>
+                    ))}
                     <div className="my-1 border-t border-zinc-200 dark:border-zinc-800" />
                     <button
                       onClick={() => { setShowMenu(false); setShowDeleteConfirm(true); }}
