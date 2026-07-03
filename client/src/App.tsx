@@ -18,7 +18,6 @@ import { useStore } from './lib/store';
 const ArchivePage = lazy(() => import('./components/ArchivePage').then((m) => ({ default: m.ArchivePage })));
 const SettingsPage = lazy(() => import('./components/SettingsPage').then((m) => ({ default: m.SettingsPage })));
 const ScheduledTasksPage = lazy(() => import('./components/ScheduledTasksPage').then((m) => ({ default: m.ScheduledTasksPage })));
-const SkillsPage = lazy(() => import('./components/SkillsPage').then((m) => ({ default: m.SkillsPage })));
 const FileBrowserPage = lazy(() => import('./components/FileBrowserPage').then((m) => ({ default: m.FileBrowserPage })));
 const MemoryPage = lazy(() => import('./components/MemoryPage').then((m) => ({ default: m.MemoryPage })));
 const AnalyticsPage = lazy(() => import('./components/AnalyticsPage').then((m) => ({ default: m.AnalyticsPage })));
@@ -63,8 +62,6 @@ function AppShell() {
               <Route path="/scheduled-tasks/:scheduledTaskId/runs" element={<ScheduledTasksPage />} />
               <Route path="/scheduled-tasks/:scheduledTaskId/runs/:runId" element={<ScheduledTasksPage />} />
               <Route path="/scheduled-tasks/:scheduledTaskId" element={<ScheduledTasksPage />} />
-              <Route path="/skills" element={<Navigate to="/skills/browse" replace />} />
-              <Route path="/skills/:tab" element={<SkillsPage />} />
               <Route path="/files" element={<FileBrowserPage />} />
               <Route path="/memory" element={<MemoryPage />} />
               <Route path="/analytics" element={<AnalyticsPage />} />

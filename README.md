@@ -61,7 +61,6 @@ Each task is a persistent Hermes root session. You talk to it, it works, and the
 
 - **Scheduled task supervision**: automatically monitor, recover, and report on scheduled agent jobs
 - **Notifications**: get alerted via Telegram, WhatsApp, or webhook when a task needs review
-- **Skills library**: pluggable skill templates for common workflows (lead gen, web research, content pipelines, data collection, competitive monitoring, outbound sequences)
 
 ## FAQ
 
