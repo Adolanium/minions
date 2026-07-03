@@ -19,9 +19,12 @@ import type {
 import type { AgentAdapter, AgentRunOptions, AgentRunSettings, StreamEvent } from './types.js';
 import type { WorkerEvent, WorkerRequest, WorkerResult, WorkerErrorPayload } from './worker-protocol.js';
 import { expandHomePrefix, resolveHermesHome, resolveMinionsWorkspaceDir } from '../paths.js';
+import { setWorkerUp } from '../events.js';
 
 const WORKER_READY_TIMEOUT_MS = 10_000;
 const WORKER_INTERRUPT_TIMEOUT_MS = 10_000;
+const WORKER_RESPAWN_BACKOFF_MS = [1_000, 2_000, 5_000, 15_000, 30_000];
+const WORKER_SURVIVAL_RESET_MS = 60_000;
 
 type WorkerRequestInput = WorkerRequest extends infer Request
   ? Request extends WorkerRequest
@@ -168,6 +171,9 @@ class HermesWorkerClient {
   private pending = new Map<string, Pending>();
   private ready = false;
   private readyPromise: Promise<void> | null = null;
+  private stopping = false;
+  private respawnTimer: ReturnType<typeof setTimeout> | null = null;
+  private respawnAttempt = 0;
 
   async start(): Promise<void> {
     this.ensureStarted();
@@ -179,6 +185,9 @@ class HermesWorkerClient {
         .then((result) => {
           if (!result.ok) throw new Error('Hermes worker healthcheck failed');
           this.ready = true;
+          this.respawnAttempt = 0;
+          this.clearRespawnTimer();
+          setWorkerUp(true);
         })
         .catch((error) => {
           this.ready = false;
@@ -194,48 +203,55 @@ class HermesWorkerClient {
   }
 
   async stop(signal: NodeJS.Signals = 'SIGTERM'): Promise<void> {
-    const child = this.child;
-    this.child = null;
-    this.ready = false;
-    this.readyPromise = null;
+    this.stopping = true;
+    this.clearRespawnTimer();
 
-    if (this.readline) {
-      this.readline.close();
-      this.readline = null;
-    }
+    try {
+      const child = this.child;
+      this.child = null;
+      this.ready = false;
+      this.readyPromise = null;
 
-    this.failPending(new Error('Hermes worker stopped'));
-
-    if (!child || child.exitCode !== null) return;
-
-    await new Promise<void>((resolve) => {
-      let settled = false;
-      let forceTimer: ReturnType<typeof setTimeout> | null = null;
-
-      const done = () => {
-        if (settled) return;
-        settled = true;
-        if (forceTimer) clearTimeout(forceTimer);
-        resolve();
-      };
-
-      forceTimer = setTimeout(() => {
-        if (child.exitCode === null) child.kill('SIGKILL');
-        done();
-      }, 500);
-      forceTimer.unref();
-
-      child.once('exit', done);
-      child.once('error', done);
-
-      try {
-        if (!child.stdin.destroyed) child.stdin.end();
-      } catch {
-        // The worker may already be exiting because the terminal delivered SIGINT.
+      if (this.readline) {
+        this.readline.close();
+        this.readline = null;
       }
 
-      if (!child.killed) child.kill(signal);
-    });
+      this.failPending(new Error('Hermes worker stopped'));
+
+      if (!child || child.exitCode !== null) return;
+
+      await new Promise<void>((resolve) => {
+        let settled = false;
+        let forceTimer: ReturnType<typeof setTimeout> | null = null;
+
+        const done = () => {
+          if (settled) return;
+          settled = true;
+          if (forceTimer) clearTimeout(forceTimer);
+          resolve();
+        };
+
+        forceTimer = setTimeout(() => {
+          if (child.exitCode === null) child.kill('SIGKILL');
+          done();
+        }, 500);
+        forceTimer.unref();
+
+        child.once('exit', done);
+        child.once('error', done);
+
+        try {
+          if (!child.stdin.destroyed) child.stdin.end();
+        } catch {
+          // The worker may already be exiting because the terminal delivered SIGINT.
+        }
+
+        if (!child.killed) child.kill(signal);
+      });
+    } finally {
+      this.stopping = false;
+    }
   }
 
   async request<T extends WorkerResult>(input: WorkerRequest['type'] | WorkerRequestInput, timeoutMs?: number): Promise<T> {
@@ -336,6 +352,11 @@ class HermesWorkerClient {
     child.on('exit', (code, signal) => {
       this.handleExit(new Error(`Hermes worker exited (${signal ?? code ?? 'unknown'})`));
     });
+
+    const survivalTimer = setTimeout(() => {
+      if (this.child === child) this.respawnAttempt = 0;
+    }, WORKER_SURVIVAL_RESET_MS);
+    survivalTimer.unref();
   }
 
   private handleLine(line: string): void {
@@ -379,6 +400,33 @@ class HermesWorkerClient {
     this.ready = false;
 
     this.failPending(new Error(`Hermes worker crashed: ${error.message}`));
+
+    if (!this.stopping) {
+      setWorkerUp(false);
+      this.scheduleRespawn();
+    }
+  }
+
+  private scheduleRespawn(): void {
+    if (this.stopping || this.respawnTimer) return;
+
+    const delay = WORKER_RESPAWN_BACKOFF_MS[Math.min(this.respawnAttempt, WORKER_RESPAWN_BACKOFF_MS.length - 1)];
+    this.respawnAttempt++;
+
+    this.respawnTimer = setTimeout(() => {
+      this.respawnTimer = null;
+      this.start().catch((error) => {
+        process.stderr.write(`[hermes-worker] respawn attempt failed: ${error instanceof Error ? error.message : error}\n`);
+      });
+    }, delay);
+    this.respawnTimer.unref();
+  }
+
+  private clearRespawnTimer(): void {
+    if (this.respawnTimer) {
+      clearTimeout(this.respawnTimer);
+      this.respawnTimer = null;
+    }
   }
 
   private write(request: WorkerRequest): void {
