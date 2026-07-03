@@ -13,6 +13,7 @@ import type {
   ScheduledTask,
   ScheduledTaskInput,
   SessionMetadata,
+  SessionSearchMatch,
   TaskMessage,
 } from '../../shared/types.js';
 import type { AgentAdapter, AgentRunOptions, AgentRunSettings, StreamEvent } from './types.js';
@@ -510,6 +511,15 @@ export class HermesWorkerAdapter implements AgentAdapter {
       sessionId,
     });
     return result.session;
+  }
+
+  async searchSessions(query: string, limit = 20): Promise<SessionSearchMatch[]> {
+    const result = await this.client.request<{ matches: SessionSearchMatch[] }>({
+      type: 'session.search',
+      query,
+      limit,
+    });
+    return result.matches;
   }
 
   async getDefaults(): Promise<AgentDefaults> {

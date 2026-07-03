@@ -10,6 +10,12 @@ import {
 const stmtAllTasks = db.prepare("SELECT * FROM tasks WHERE status != 'archived' ORDER BY updated_at DESC");
 const stmtTasksByStatus = db.prepare('SELECT * FROM tasks WHERE status = ? ORDER BY updated_at DESC');
 const stmtGetTask = db.prepare('SELECT * FROM tasks WHERE id = ?');
+const stmtSearchTasks = db.prepare(`
+  SELECT * FROM tasks
+  WHERE title LIKE @pattern ESCAPE '\\' OR description LIKE @pattern ESCAPE '\\'
+  ORDER BY updated_at DESC
+  LIMIT @limit
+`);
 const stmtInsertTask = db.prepare(`
   INSERT INTO tasks (
     id, title, description, status, agent_model, agent_provider, reasoning_effort,
@@ -37,6 +43,11 @@ export function getAllTasks(status?: TaskStatus): Task[] {
 
 export function getTask(id: string): Task | undefined {
   return stmtGetTask.get(id) as Task | undefined;
+}
+
+export function searchTasks(query: string, limit = 20): Task[] {
+  const escaped = query.replace(/[\\%_]/g, (ch) => `\\${ch}`);
+  return stmtSearchTasks.all({ pattern: `%${escaped}%`, limit }) as Task[];
 }
 
 export function insertTask(task: {

@@ -9,6 +9,7 @@ import { SettingsPage } from './components/SettingsPage';
 import { ScheduledTasksPage } from './components/ScheduledTasksPage';
 import { SkillsPage } from './components/SkillsPage';
 import { FileBrowserPage } from './components/FileBrowserPage';
+import { SearchPalette } from './components/SearchPalette';
 import { Toaster } from 'sonner';
 import { useTasks } from './hooks/useTasks';
 import { useTheme } from './hooks/useTheme';
@@ -42,6 +43,7 @@ function AppShell() {
           </Routes>
         </HeaderProvider>
       </main>
+      <SearchPalette />
       <Toaster
         theme={theme === 'system' ? 'system' : theme}
         position="top-center"

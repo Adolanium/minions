@@ -6,6 +6,7 @@ import type {
   ScheduledTask,
   ScheduledTaskInput,
   SessionMetadata,
+  SessionSearchMatch,
   TaskMessage,
   ContextUsage,
 } from '../../shared/types.js';
@@ -27,6 +28,7 @@ export type WorkerRequest =
   | { id: string; type: 'scheduledTasks.tick' }
   | { id: string; type: 'session.messages.get'; sessionId: string; taskId?: string }
   | { id: string; type: 'session.get'; sessionId: string }
+  | { id: string; type: 'session.search'; query: string; limit?: number }
   | { id: string; type: 'goal.status'; sessionId: string }
   | { id: string; type: 'goal.set'; sessionId: string; goal: string; maxTurns?: number | null }
   | { id: string; type: 'goal.pause'; sessionId: string; reason?: string }
@@ -74,6 +76,7 @@ export type WorkerResult =
   | { executed: number }
   | { messages: TaskMessage[] }
   | { session: SessionMetadata | null }
+  | { matches: SessionSearchMatch[] }
   | { goal: GoalStateSnapshot | null }
   | { cleared: boolean }
   | { interrupted: boolean }

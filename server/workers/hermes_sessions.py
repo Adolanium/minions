@@ -320,6 +320,48 @@ def _float_or_none(value: Any) -> float | None:
         return None
 
 
+def search_sessions(query: Any, limit: Any) -> dict[str, Any]:
+    query = string_or_none(query)
+    if not query:
+        return {"matches": []}
+
+    try:
+        limit_int = int(limit) if limit is not None else 20
+    except (TypeError, ValueError):
+        limit_int = 20
+    limit_int = max(1, min(limit_int, 100))
+
+    import hermes_worker
+
+    hermes_worker._ensure_imports()
+    if hermes_worker._SessionDB is None:
+        return {"matches": []}
+
+    try:
+        session_db = hermes_worker._SessionDB()
+    except Exception:
+        return {"matches": []}
+
+    # Wrap as a quoted phrase so FTS5 treats the query as a literal substring
+    # instead of parsing AND/OR/NOT or other query syntax out of user input.
+    fts_query = '"' + query.replace('"', '""') + '"'
+    try:
+        rows = session_db.search_messages(fts_query, limit=limit_int, sort="newest")
+    except Exception:
+        return {"matches": []}
+
+    matches = [
+        {
+            "session_id": string_or_none(row.get("session_id")) or "",
+            "snippet": string_or_none(row.get("snippet")) or "",
+            "role": string_or_none(row.get("role")) or "",
+            "created_at": _timestamp_to_ms(row.get("timestamp")),
+        }
+        for row in rows
+    ]
+    return {"matches": matches}
+
+
 def project_session_metadata(session_id: Any) -> dict[str, Any]:
     session_id = string_or_none(session_id)
     if not session_id:

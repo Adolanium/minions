@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { SquarePen, Columns3, Settings, PanelLeftClose, PanelLeft, Repeat, Sparkles, Folder, Archive } from 'lucide-react';
+import { SquarePen, Columns3, Settings, PanelLeftClose, PanelLeft, Repeat, Sparkles, Folder, Archive, Search } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { isEditableTarget } from '../lib/keyboard';
 
@@ -11,6 +11,7 @@ export function Sidebar() {
   const navigate = useNavigate();
   const collapsed = useStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useStore((s) => s.toggleSidebar);
+  const toggleSearch = useStore((s) => s.toggleSearch);
 
   useEffect(() => {
     let chordKey: string | null = null;
@@ -21,6 +22,12 @@ export function Sidebar() {
       if (mod && e.shiftKey && e.key.toLowerCase() === 'o') {
         e.preventDefault();
         navigate('/tasks/new');
+        return;
+      }
+
+      if (mod && !e.shiftKey && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        toggleSearch();
         return;
       }
 
@@ -51,7 +58,7 @@ export function Sidebar() {
       window.removeEventListener('keydown', handleKeyDown);
       if (chordTimeout) clearTimeout(chordTimeout);
     };
-  }, [navigate]);
+  }, [navigate, toggleSearch]);
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/' || (location.pathname.startsWith('/tasks/') && location.pathname !== '/tasks/new');
@@ -109,6 +116,13 @@ export function Sidebar() {
             active={isActive('/tasks/new')}
             collapsed={desktopCollapsed}
             shortcut={isMac ? '⇧⌘O' : 'Ctrl+⇧+O'}
+          />
+          <SidebarButton
+            icon={<Search size={18} />}
+            label="Search"
+            onClick={toggleSearch}
+            collapsed={desktopCollapsed}
+            shortcut={isMac ? '⌘K' : 'Ctrl+K'}
           />
           <SidebarLink
             icon={<Columns3 size={18} />}
@@ -257,6 +271,39 @@ function SidebarLink({
         )
       )}
     </Link>
+  );
+}
+
+function SidebarButton({
+  icon,
+  label,
+  onClick,
+  collapsed,
+  shortcut,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  collapsed: boolean;
+  shortcut?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={shortcut ? `${label} (${shortcut})` : label}
+      className={`group hidden min-w-0 flex-1 items-center rounded-lg px-1.5 py-1.5 text-[10px] font-medium leading-none transition-colors sm:flex sm:w-full sm:px-3 sm:py-2 sm:text-sm sm:leading-normal text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100 sm:text-zinc-700 sm:dark:text-zinc-300 sm:hover:bg-surface ${
+        collapsed ? 'sm:justify-center' : 'sm:justify-start sm:gap-3'
+      }`}
+    >
+      <span className="text-zinc-500 dark:text-zinc-400">{icon}</span>
+      {!collapsed && <span className="hidden truncate sm:block">{label}</span>}
+      {!collapsed && shortcut && (
+        <span className="ml-auto hidden text-xs tracking-widest text-zinc-400 opacity-0 transition-opacity group-hover:opacity-100 dark:text-zinc-500 sm:block">
+          {shortcut}
+        </span>
+      )}
+    </button>
   );
 }
 

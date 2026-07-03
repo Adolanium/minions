@@ -134,6 +134,26 @@ export interface SessionMetadata {
   model: string | null;
 }
 
+export interface SessionSearchMatch {
+  session_id: string;
+  snippet: string;
+  role: string;
+  created_at: number;
+}
+
+export interface SearchMessageMatch {
+  taskId: string;
+  taskTitle: string;
+  snippet: string;
+  role: string;
+  created_at: number;
+}
+
+export interface SearchResponse {
+  tasks: Task[];
+  messages: SearchMessageMatch[];
+}
+
 export interface AgentDefaults {
   provider: string | null;
   model: string | null;

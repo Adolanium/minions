@@ -6,6 +6,7 @@ interface AppState {
   taskRuns: Map<string, TaskRunState>;
   tasksLoaded: boolean;
   sidebarCollapsed: boolean;
+  searchOpen: boolean;
 
   setTasks: (tasks: Task[]) => void;
   upsertTask: (task: Task) => void;
@@ -13,6 +14,9 @@ interface AppState {
   setTaskRuns: (runs: TaskRunState[]) => void;
   setTaskRun: (run: TaskRunState) => void;
   toggleSidebar: () => void;
+  openSearch: () => void;
+  closeSearch: () => void;
+  toggleSearch: () => void;
 }
 
 function tasksEqual(a: Task, b: Task): boolean {
@@ -40,6 +44,7 @@ export const useStore = create<AppState>((set) => ({
   taskRuns: new Map<string, TaskRunState>(),
   tasksLoaded: false,
   sidebarCollapsed: localStorage.getItem('sidebarCollapsed') === 'true',
+  searchOpen: false,
 
   setTasks: (tasks) => set({ tasks, tasksLoaded: true }),
 
@@ -98,6 +103,10 @@ export const useStore = create<AppState>((set) => ({
       localStorage.setItem('sidebarCollapsed', String(next));
       return { sidebarCollapsed: next };
     }),
+
+  openSearch: () => set({ searchOpen: true }),
+  closeSearch: () => set({ searchOpen: false }),
+  toggleSearch: () => set((state) => ({ searchOpen: !state.searchOpen })),
 }));
 
 export async function optimisticMoveTask(
