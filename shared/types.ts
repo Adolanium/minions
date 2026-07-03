@@ -34,6 +34,7 @@ export interface Task {
   last_viewed_at: number | null;
   last_context_used_tokens: number | null;
   last_context_window_tokens: number | null;
+  estimated_cost_usd: number | null;
 }
 
 export interface TaskMessage {

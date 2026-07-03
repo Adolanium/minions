@@ -678,6 +678,7 @@ export function TaskChat({ taskId, initialMessage, initialSettings }: TaskChatPr
               {context && (
                 <ContextRing
                   context={context}
+                  taskId={taskId}
                   onCompact={handleCompact}
                   compacting={compactionBlocker}
                   compactDisabled={isStreaming || configPending || queuedMessage !== null}

@@ -111,20 +111,30 @@ interface StreamChatTurnResult {
   interrupted: boolean;
 }
 
-function recordCompletedAgentRun(taskId: string, context: ContextUsage | null): Task | undefined {
-  const updated = recordAgentResponse(taskId, Date.now(), context);
+async function recordCompletedAgentRun(taskId: string, context: ContextUsage | null): Promise<Task | undefined> {
+  let costUsd: number | undefined;
+  try {
+    const session = await adapter.getSessionMetadata(taskId);
+    if (session && typeof session.estimated_cost_usd === 'number') {
+      costUsd = session.estimated_cost_usd;
+    }
+  } catch {
+    // Cost lookup is best effort and failure leaves the previous value in place.
+  }
+
+  const updated = recordAgentResponse(taskId, Date.now(), context, costUsd);
   if (updated && updated.status === 'in_progress') {
     return updateTask(taskId, { status: 'in_review' });
   }
   return updated;
 }
 
-function settleRun(taskId: string, runId: string, context: ContextUsage | null): void {
+async function settleRun(taskId: string, runId: string, context: ContextUsage | null): Promise<void> {
   const status = getRunStatus(taskId);
   if (status) broadcast({ type: 'task_run_updated', run: status });
 
   if (status?.status === 'done') {
-    const updated = recordCompletedAgentRun(taskId, context);
+    const updated = await recordCompletedAgentRun(taskId, context);
     if (updated) broadcast({ type: 'task_updated', task: updated });
   } else {
     touchTask(taskId);
@@ -200,7 +210,7 @@ async function streamChatTurn(
 async function consumeChatRun(runTask: Task, sessionId: string, content: string, runId: string): Promise<void> {
   const result = await streamChatTurn(runTask, sessionId, content, { completeOnDone: true });
   try {
-    settleRun(runTask.id, runId, result.context ?? null);
+    await settleRun(runTask.id, runId, result.context ?? null);
   } catch {
     finishRun(runTask.id, ERROR_SNAPSHOT_TTL_MS, runId);
   }
@@ -267,7 +277,7 @@ async function consumeGoalRun(runTask: Task, sessionId: string, initialContent: 
     // channel never sees the terminal status — push a final snapshot for it. The
     // error path already delivered a terminal `error` event, so skip it there.
     if (!hadError) broadcastRunSnapshot(runTask.id);
-    settleRun(runTask.id, runId, finalContext ?? null);
+    await settleRun(runTask.id, runId, finalContext ?? null);
   }
 }
 
