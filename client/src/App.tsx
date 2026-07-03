@@ -9,6 +9,7 @@ import { SettingsPage } from './components/SettingsPage';
 import { ScheduledTasksPage } from './components/ScheduledTasksPage';
 import { SkillsPage } from './components/SkillsPage';
 import { FileBrowserPage } from './components/FileBrowserPage';
+import { MemoryPage } from './components/MemoryPage';
 import { SearchPalette } from './components/SearchPalette';
 import { Toaster } from 'sonner';
 import { useTasks } from './hooks/useTasks';
@@ -46,6 +47,7 @@ function AppShell() {
               <Route path="/skills" element={<Navigate to="/skills/browse" replace />} />
               <Route path="/skills/:tab" element={<SkillsPage />} />
               <Route path="/files" element={<FileBrowserPage />} />
+              <Route path="/memory" element={<MemoryPage />} />
               <Route path="/archive" element={<ArchivePage />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Routes>

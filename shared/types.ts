@@ -153,6 +153,32 @@ export interface SessionMetadata {
   model: string | null;
 }
 
+export interface MemoryPathEntry {
+  key: string;
+  label: string;
+  filename: string;
+  path: string;
+}
+
+export interface MemoryFile extends MemoryPathEntry {
+  displayPath: string;
+  exists: boolean;
+  content: string;
+  modifiedAt: number | null;
+}
+
+export interface MemoryFilesResponse {
+  hermesHome: string;
+  files: MemoryFile[];
+}
+
+export interface MemorySaveResponse {
+  key: string;
+  path: string;
+  size: number;
+  modifiedAt: number;
+}
+
 export interface SubagentSession {
   id: string;
   parent_id: string | null;

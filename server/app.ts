@@ -10,6 +10,7 @@ import { createSearchRouter } from './routes/search.js';
 import { createSubagentsRouter } from './routes/subagents.js';
 import { skillsRouter } from './routes/skills.js';
 import { filesRouter } from './routes/files.js';
+import { createMemoryRouter } from './routes/memory.js';
 import { notificationsRouter } from './routes/notifications.js';
 import { HermesWorkerAdapter } from './adapters/hermes-worker.js';
 import { initSSE, addClient, sendEvent, getWorkerUp } from './events.js';
@@ -39,6 +40,7 @@ app.get('/api/events', (req, res) => {
 });
 
 app.use('/api/files', express.json({ limit: '25mb' }), filesRouter);
+app.use('/api/memory', express.json({ limit: '5mb' }), createMemoryRouter(adapter));
 
 app.use(express.json());
 

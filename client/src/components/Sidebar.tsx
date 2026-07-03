@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { SquarePen, Columns3, Settings, PanelLeftClose, PanelLeft, Repeat, Sparkles, Folder, Archive, Search } from 'lucide-react';
+import { SquarePen, Columns3, Settings, PanelLeftClose, PanelLeft, Repeat, Sparkles, Folder, Archive, Search, BrainCircuit } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { isEditableTarget } from '../lib/keyboard';
 
@@ -156,6 +156,14 @@ export function Sidebar() {
             className="sm:hidden"
           />
           <SidebarLink
+            icon={<BrainCircuit size={18} />}
+            label="Memory"
+            to="/memory"
+            active={isActive('/memory')}
+            collapsed={desktopCollapsed}
+            className="sm:hidden"
+          />
+          <SidebarLink
             icon={<Archive size={18} />}
             label="Archive"
             to="/archive"
@@ -187,6 +195,14 @@ export function Sidebar() {
               label="Skills"
               to="/skills/browse"
               active={location.pathname === '/skills' || location.pathname.startsWith('/skills/')}
+              collapsed={desktopCollapsed}
+              subdued
+            />
+            <SidebarLink
+              icon={<BrainCircuit size={18} />}
+              label="Memory"
+              to="/memory"
+              active={isActive('/memory')}
               collapsed={desktopCollapsed}
               subdued
             />

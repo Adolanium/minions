@@ -4,6 +4,7 @@ import type {
   AgentToolsetsResponse,
   GoalDecision,
   GoalStateSnapshot,
+  MemoryPathEntry,
   ScheduledTask,
   ScheduledTaskInput,
   SessionMetadata,
@@ -20,6 +21,7 @@ export type WorkerRequest =
   | { id: string; type: 'settings.set'; provider?: string | null; model?: string | null; reasoningEffort?: string | null }
   | { id: string; type: 'models.list' }
   | { id: string; type: 'toolsets.list' }
+  | { id: string; type: 'paths.get' }
   | { id: string; type: 'scheduledTasks.list'; includeDisabled?: boolean; limit?: number }
   | { id: string; type: 'scheduledTasks.get'; scheduledTaskId: string }
   | { id: string; type: 'scheduledTasks.create' } & ScheduledTaskInput
@@ -76,6 +78,7 @@ export type WorkerResult =
   | AgentDefaults
   | AgentModelsResponse
   | AgentToolsetsResponse
+  | { hermesHome: string; files: MemoryPathEntry[] }
   | { scheduledTasks: ScheduledTask[] }
   | { scheduledTask: ScheduledTask | null }
   | { executed: number }
