@@ -99,7 +99,7 @@ export function deleteTask(id: string) {
   return request<{ ok: boolean }>(`/tasks/${id}`, { method: 'DELETE' });
 }
 
-export function patchTask(id: string, fields: { title?: string; description?: string; status?: TaskStatus; toolsets?: string[] | null; pinned?: boolean }) {
+export function patchTask(id: string, fields: { title?: string; description?: string; status?: TaskStatus; toolsets?: string[] | null; pinned?: boolean; tags?: string[] | null }) {
   return request<{ task: Task }>(`/tasks/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(fields),

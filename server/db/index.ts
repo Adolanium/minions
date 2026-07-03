@@ -31,5 +31,6 @@ ensureColumn('tasks', 'toolsets', 'TEXT');
 ensureColumn('tasks', 'depends_on_task_id', 'TEXT');
 ensureColumn('tasks', 'pending_prompt', 'TEXT');
 ensureColumn('tasks', 'pinned', 'INTEGER DEFAULT 0');
+ensureColumn('tasks', 'tags', 'TEXT');
 
 export default db;

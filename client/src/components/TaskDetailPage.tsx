@@ -12,6 +12,7 @@ import { STATUS_META } from '../lib/constants';
 import { formatCost, formatTokenCount, timeAgo } from '../lib/format';
 import { isEditableTarget } from '../lib/keyboard';
 import { TaskChat } from './TaskChat';
+import { TagsEditor } from './TaskTags';
 import { RenameReveal, useRenameAnimation } from './RenameTitle';
 import type { AgentRunSettings } from '../lib/api';
 import type { TaskStatus } from '@shared/types';
@@ -287,6 +288,9 @@ export function TaskDetailPage() {
               >
                 <Pencil size={15} />
               </button>
+            </div>
+            <div className="mt-1.5">
+              <TagsEditor task={task} />
             </div>
           </div>
 

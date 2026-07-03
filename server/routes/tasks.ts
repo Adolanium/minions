@@ -9,6 +9,8 @@ import type { Task, TaskStatus } from '../../shared/types.js';
 export const tasksRouter = Router();
 
 const LOW_INFORMATION_TITLES = new Set(['?', 'hi', 'hello', 'hey', 'yo']);
+const MAX_TAGS = 8;
+const MAX_TAG_LENGTH = 24;
 
 tasksRouter.get('/', (req, res) => {
   const status = req.query.status as TaskStatus | undefined;
@@ -87,7 +89,7 @@ tasksRouter.post('/', (req, res) => {
 });
 
 tasksRouter.patch('/:id', (req, res) => {
-  const allowed = ['title', 'description', 'status', 'toolsets', 'pinned'] as const;
+  const allowed = ['title', 'description', 'status', 'toolsets', 'pinned', 'tags'] as const;
   const fields: Record<string, unknown> = {};
   for (const key of allowed) {
     if (req.body[key] !== undefined) fields[key] = req.body[key];
@@ -95,6 +97,21 @@ tasksRouter.patch('/:id', (req, res) => {
 
   if (fields.pinned !== undefined && typeof fields.pinned !== 'boolean') {
     return res.status(400).json({ error: 'pinned must be a boolean' });
+  }
+
+  if (fields.tags !== undefined && fields.tags !== null) {
+    const raw = fields.tags;
+    if (!Array.isArray(raw) || !raw.every((entry) => typeof entry === 'string')) {
+      return res.status(400).json({ error: 'tags must be an array of strings or null' });
+    }
+    const tags = [...new Set(raw.map((tag) => tag.trim()).filter(Boolean))];
+    if (tags.length > MAX_TAGS) {
+      return res.status(400).json({ error: `A task can have at most ${MAX_TAGS} tags` });
+    }
+    if (tags.some((tag) => tag.length > MAX_TAG_LENGTH)) {
+      return res.status(400).json({ error: `Tags can be at most ${MAX_TAG_LENGTH} characters` });
+    }
+    fields.tags = tags.length > 0 ? tags : null;
   }
 
   if (fields.status && !ALL_TASK_STATUSES.includes(fields.status as TaskStatus)) {
