@@ -68,6 +68,20 @@ notificationsRouter.put('/', (req, res) => {
     updates.notifyOnError = req.body.notifyOnError;
   }
 
+  if ('notifyOnScheduledFailure' in req.body) {
+    if (typeof req.body.notifyOnScheduledFailure !== 'boolean') {
+      return res.status(400).json({ error: 'notifyOnScheduledFailure must be a boolean' });
+    }
+    updates.notifyOnScheduledFailure = req.body.notifyOnScheduledFailure;
+  }
+
+  if ('retryScheduledTasksOnce' in req.body) {
+    if (typeof req.body.retryScheduledTasksOnce !== 'boolean') {
+      return res.status(400).json({ error: 'retryScheduledTasksOnce must be a boolean' });
+    }
+    updates.retryScheduledTasksOnce = req.body.retryScheduledTasksOnce;
+  }
+
   res.json(withMaskedToken(saveNotificationSettings(updates)));
 });
 

@@ -40,6 +40,8 @@ const EMPTY_NOTIFICATION_SETTINGS: NotificationSettings = {
   webhookUrl: null,
   notifyOnReview: true,
   notifyOnError: true,
+  notifyOnScheduledFailure: true,
+  retryScheduledTasksOnce: false,
 };
 
 function SegmentedGroup<T>({ options, value, onChange }: {
@@ -333,6 +335,28 @@ export function SettingsPage() {
               />
               Notify on error
             </label>
+            <label className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300">
+              <input
+                type="checkbox"
+                checked={notificationSettings.notifyOnScheduledFailure}
+                onChange={(event) => setNotificationSettings((s) => ({ ...s, notifyOnScheduledFailure: event.target.checked }))}
+              />
+              Notify on scheduled task failure
+            </label>
+          </div>
+
+          <div className="mt-3">
+            <label className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300">
+              <input
+                type="checkbox"
+                checked={notificationSettings.retryScheduledTasksOnce}
+                onChange={(event) => setNotificationSettings((s) => ({ ...s, retryScheduledTasksOnce: event.target.checked }))}
+              />
+              Retry failed scheduled tasks once
+            </label>
+            <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500">
+              Re-runs a failed scheduled task automatically before notifying.
+            </p>
           </div>
 
           <div className="mt-4 flex items-center gap-2">
