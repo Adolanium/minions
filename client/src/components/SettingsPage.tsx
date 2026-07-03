@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Settings, Bot, Sun, Moon, Monitor, Info, Volume2, VolumeX, Play } from 'lucide-react';
+import { Settings, Bot, Sun, Moon, Monitor, Info, Volume2, VolumeX, Play, Bell, BellOff } from 'lucide-react';
+import { toast } from 'sonner';
 import { useTheme, type ThemePreference } from '../hooks/useTheme';
 import { useSoundOnComplete } from '../hooks/useSoundOnComplete';
+import { useDesktopNotifications } from '../hooks/useDesktopNotifications';
 import { useAgentConfig } from '../hooks/useAgentConfig';
-import { fetchAppVersion, updateAgentDefaults } from '../lib/api';
-import type { AppVersion } from '@shared/types';
+import { fetchAppVersion, updateAgentDefaults, fetchNotificationSettings, updateNotificationSettings, sendTestNotifications } from '../lib/api';
+import type { AppVersion, NotificationSettings } from '@shared/types';
 import { toErrorMessage } from '../lib/format';
 import { ModelPicker, parseQualifiedModelValue, REASONING_LABELS, type ModelPickerSelection } from './InputToolbar';
 import {
@@ -24,6 +26,21 @@ const soundOptions: SegmentOption<boolean>[] = [
   { value: false, label: 'Off', icon: VolumeX },
   { value: true, label: 'On', icon: Volume2 },
 ];
+
+const desktopOptions: SegmentOption<boolean>[] = [
+  { value: false, label: 'Off', icon: BellOff },
+  { value: true, label: 'On', icon: Bell },
+];
+
+const NOTIFICATION_INPUT_CLASS = 'mt-1 h-9 w-full rounded-md border border-zinc-200 bg-white px-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100';
+
+const EMPTY_NOTIFICATION_SETTINGS: NotificationSettings = {
+  telegramBotToken: null,
+  telegramChatId: null,
+  webhookUrl: null,
+  notifyOnReview: true,
+  notifyOnError: true,
+};
 
 function SegmentedGroup<T>({ options, value, onChange }: {
   options: SegmentOption<T>[];
@@ -53,12 +70,57 @@ function SegmentedGroup<T>({ options, value, onChange }: {
 export function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const { enabled: soundEnabled, setEnabled: setSoundEnabled, playPreview } = useSoundOnComplete();
+  const { enabled: desktopEnabled, setEnabled: setDesktopEnabled } = useDesktopNotifications();
 
   const { defaults: agentDefaults, modelGroups, isLoading: isLoadingDefaults, replaceDefaults } = useAgentConfig();
   const [appVersion, setAppVersion] = useState<AppVersion | null>(null);
   const [defaultsError, setDefaultsError] = useState<string | null>(null);
   const [savingDefaults, setSavingDefaults] = useState(false);
   const [savedDefaults, setSavedDefaults] = useState(false);
+
+  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(EMPTY_NOTIFICATION_SETTINGS);
+  const [savingNotifications, setSavingNotifications] = useState(false);
+  const [testingNotifications, setTestingNotifications] = useState(false);
+  const [notificationsError, setNotificationsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchNotificationSettings()
+      .then(setNotificationSettings)
+      .catch(() => {});
+  }, []);
+
+  const saveNotifications = useCallback(async () => {
+    setSavingNotifications(true);
+    setNotificationsError(null);
+    try {
+      const result = await updateNotificationSettings(notificationSettings);
+      setNotificationSettings(result);
+      toast('Notification settings saved');
+    } catch (error) {
+      setNotificationsError(toErrorMessage(error, 'Failed to save'));
+    } finally {
+      setSavingNotifications(false);
+    }
+  }, [notificationSettings]);
+
+  const runTestNotifications = useCallback(async () => {
+    setTestingNotifications(true);
+    try {
+      const { results } = await sendTestNotifications();
+      const entries = Object.entries(results);
+      if (entries.length === 0) {
+        toast('No notification channels configured');
+      } else {
+        for (const [channel, result] of entries) {
+          toast(`${channel === 'telegram' ? 'Telegram' : 'Webhook'}: ${result?.ok ? 'sent' : result?.error ?? 'failed'}`);
+        }
+      }
+    } catch (error) {
+      toast(toErrorMessage(error, 'Test failed'));
+    } finally {
+      setTestingNotifications(false);
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -191,6 +253,105 @@ export function SettingsPage() {
             </button>
           </div>
         </div>
+
+        <div>
+          <h2 className="text-xs font-medium uppercase tracking-wide text-zinc-400 dark:text-zinc-500 mb-2">Desktop notifications</h2>
+          <SegmentedGroup options={desktopOptions} value={desktopEnabled} onChange={setDesktopEnabled} />
+        </div>
+
+        <section
+          aria-labelledby="notifications-title"
+          className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900 sm:p-5"
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <h2 id="notifications-title" className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                Notifications
+              </h2>
+              <p className="mt-1 text-sm leading-5 text-zinc-500 dark:text-zinc-400">
+                Get a Telegram message or webhook call when a task needs attention.
+              </p>
+            </div>
+            <span
+              aria-live="polite"
+              aria-hidden={!notificationsError && !savingNotifications}
+              className={`shrink-0 text-xs transition-opacity duration-300 ${
+                notificationsError || savingNotifications ? 'opacity-100' : 'opacity-0'
+              } ${notificationsError ? 'text-red-500' : 'text-zinc-400 dark:text-zinc-500'}`}
+            >
+              {notificationsError ?? (savingNotifications ? 'Saving...' : '')}
+            </span>
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
+              Telegram bot token
+              <input
+                type="text"
+                value={notificationSettings.telegramBotToken ?? ''}
+                onChange={(event) => setNotificationSettings((s) => ({ ...s, telegramBotToken: event.target.value }))}
+                placeholder="123456:ABC-DEF..."
+                className={`${NOTIFICATION_INPUT_CLASS} font-mono`}
+              />
+            </label>
+            <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
+              Telegram chat id
+              <input
+                type="text"
+                value={notificationSettings.telegramChatId ?? ''}
+                onChange={(event) => setNotificationSettings((s) => ({ ...s, telegramChatId: event.target.value }))}
+                placeholder="-100123456789"
+                className={`${NOTIFICATION_INPUT_CLASS} font-mono`}
+              />
+            </label>
+            <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 sm:col-span-2">
+              Webhook URL
+              <input
+                type="text"
+                value={notificationSettings.webhookUrl ?? ''}
+                onChange={(event) => setNotificationSettings((s) => ({ ...s, webhookUrl: event.target.value }))}
+                placeholder="https://example.com/hooks/minions"
+                className={`${NOTIFICATION_INPUT_CLASS} font-mono`}
+              />
+            </label>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-4">
+            <label className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300">
+              <input
+                type="checkbox"
+                checked={notificationSettings.notifyOnReview}
+                onChange={(event) => setNotificationSettings((s) => ({ ...s, notifyOnReview: event.target.checked }))}
+              />
+              Notify on review
+            </label>
+            <label className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-300">
+              <input
+                type="checkbox"
+                checked={notificationSettings.notifyOnError}
+                onChange={(event) => setNotificationSettings((s) => ({ ...s, notifyOnError: event.target.checked }))}
+              />
+              Notify on error
+            </label>
+          </div>
+
+          <div className="mt-4 flex items-center gap-2">
+            <button
+              onClick={saveNotifications}
+              disabled={savingNotifications}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 disabled:opacity-50 transition-colors"
+            >
+              Save
+            </button>
+            <button
+              onClick={runTestNotifications}
+              disabled={testingNotifications}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 disabled:opacity-50 transition-colors"
+            >
+              Send test
+            </button>
+          </div>
+        </section>
 
         <div>
           <h2 className="text-xs font-medium uppercase tracking-wide text-zinc-400 dark:text-zinc-500 mb-2">Version</h2>

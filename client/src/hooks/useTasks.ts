@@ -3,6 +3,7 @@ import type { BoardEvent } from '@shared/types';
 import { useStore } from '../lib/store';
 import { fetchTasks } from '../lib/api';
 import { playCompletionSound } from './useSoundOnComplete';
+import { showDesktopNotification } from './useDesktopNotifications';
 
 export function useTasks() {
   const setTasks = useStore((s) => s.setTasks);
@@ -41,6 +42,7 @@ export function useTasks() {
               const prev = useStore.getState().tasks.find((t) => t.id === event.task.id);
               if (prev && prev.status === 'in_progress' && event.task.status === 'in_review') {
                 playCompletionSound();
+                showDesktopNotification('Task ready for review', event.task.title, event.task.id);
               }
             }
             upsertTask(event.task);
@@ -49,6 +51,11 @@ export function useTasks() {
           } else if (event.type === 'task_runs_snapshot') {
             setTaskRuns(event.runs);
           } else if (event.type === 'task_run_updated') {
+            const prevRun = useStore.getState().taskRuns.get(event.run.taskId);
+            if (prevRun?.status !== 'error' && event.run.status === 'error') {
+              const failedTask = useStore.getState().tasks.find((t) => t.id === event.run.taskId);
+              showDesktopNotification('Task failed', failedTask?.title ?? event.run.taskId, event.run.taskId);
+            }
             setTaskRun(event.run);
           } else if (event.type === 'worker_status') {
             setWorkerUp(event.up);
