@@ -68,8 +68,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-export function fetchTasks() {
-  return request<{ tasks: Task[] }>('/tasks');
+export function fetchTasks(status?: TaskStatus) {
+  return request<{ tasks: Task[] }>(status ? `/tasks?status=${status}` : '/tasks');
 }
 
 export function moveTask(id: string, status: TaskStatus) {

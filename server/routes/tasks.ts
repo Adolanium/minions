@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { getAllTasks, getTask, insertTask, updateTask, deleteTask, markTaskViewed } from '../db/queries.js';
 import { broadcast } from '../events.js';
 import { adapter } from '../app.js';
-import { TASK_STATUSES } from '../../shared/types.js';
+import { ALL_TASK_STATUSES } from '../../shared/types.js';
 import type { TaskStatus } from '../../shared/types.js';
 
 export const tasksRouter = Router();
@@ -76,8 +76,8 @@ tasksRouter.patch('/:id', (req, res) => {
     if (req.body[key] !== undefined) fields[key] = req.body[key];
   }
 
-  if (fields.status && !TASK_STATUSES.includes(fields.status as TaskStatus)) {
-    return res.status(400).json({ error: `status must be one of: ${TASK_STATUSES.join(', ')}` });
+  if (fields.status && !ALL_TASK_STATUSES.includes(fields.status as TaskStatus)) {
+    return res.status(400).json({ error: `status must be one of: ${ALL_TASK_STATUSES.join(', ')}` });
   }
 
   const updated = updateTask(req.params.id, fields);
@@ -102,8 +102,8 @@ tasksRouter.delete('/:id', (req, res) => {
 
 tasksRouter.post('/:id/move', (req, res) => {
   const { status } = req.body;
-  if (!TASK_STATUSES.includes(status)) {
-    return res.status(400).json({ error: `status must be one of: ${TASK_STATUSES.join(', ')}` });
+  if (!ALL_TASK_STATUSES.includes(status)) {
+    return res.status(400).json({ error: `status must be one of: ${ALL_TASK_STATUSES.join(', ')}` });
   }
 
   const updated = updateTask(req.params.id, { status });

@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { MoreHorizontal, Trash2, Loader2, Pencil, Check } from 'lucide-react';
+import { MoreHorizontal, Trash2, Loader2, Pencil, Check, Archive } from 'lucide-react';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { StatusIcon } from './StatusIcon';
 import { useStore, optimisticMoveTask, isActiveRun } from '../lib/store';
@@ -143,6 +143,25 @@ export function TaskDetailPage() {
       await optimisticMoveTask(task, status, upsertTask, moveTask);
     }
   }, [task, upsertTask, navigate]);
+
+  const handleArchive = useCallback(() => {
+    if (!task) return;
+    setShowMenu(false);
+    const previousStatus = task.status;
+    const taskId = task.id;
+    optimisticMoveTask(task, 'archived', upsertTask, moveTask);
+    toast('Task archived', {
+      icon: <Archive size={14} strokeWidth={2.5} className="text-zinc-500 dark:text-zinc-400" />,
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          const { tasks, upsertTask: storeUpsert } = useStore.getState();
+          const current = tasks.find((t) => t.id === taskId);
+          if (current) optimisticMoveTask(current, previousStatus, storeUpsert, moveTask);
+        },
+      },
+    });
+  }, [task, upsertTask]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -295,6 +314,18 @@ export function TaskDetailPage() {
                         {STATUS_META[status].label}
                       </button>
                     ))}
+                    {task.status !== 'archived' && (
+                      <>
+                        <div className="my-1 border-t border-zinc-200 dark:border-zinc-800" />
+                        <button
+                          onClick={handleArchive}
+                          className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-left"
+                        >
+                          <Archive size={14} />
+                          Archive
+                        </button>
+                      </>
+                    )}
                     <div className="my-1 border-t border-zinc-200 dark:border-zinc-800" />
                     <button
                       onClick={() => { setShowMenu(false); setShowDeleteConfirm(true); }}

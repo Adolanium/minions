@@ -23,5 +23,12 @@ export function StatusIcon({ status }: { status: TaskStatus }) {
           <path d="M4.5 7l2 2 3.5-3.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       );
+    case 'archived':
+      return (
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <circle cx="7" cy="7" r="5.5" stroke="#a1a1aa" strokeWidth="1.5" />
+          <path d="M4.5 7h5" stroke="#a1a1aa" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      );
   }
 }

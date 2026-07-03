@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { Archive, Trash2 } from 'lucide-react';
 import type { Task, TaskStatus } from '@shared/types';
 import { TASK_STATUSES } from '@shared/types';
 import { STATUS_META } from '../lib/constants';
@@ -55,6 +56,24 @@ export function TaskContextMenu({ task, x, y, onClose }: Props) {
     await optimisticMoveTask(task, status, upsertTask, moveTask);
   }
 
+  function handleArchive() {
+    onClose();
+    const previousStatus = task.status;
+    const taskId = task.id;
+    optimisticMoveTask(task, 'archived', upsertTask, moveTask);
+    toast('Task archived', {
+      icon: <Archive size={14} strokeWidth={2.5} className="text-zinc-500 dark:text-zinc-400" />,
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          const { tasks, upsertTask: storeUpsert } = useStore.getState();
+          const current = tasks.find((t) => t.id === taskId);
+          if (current) optimisticMoveTask(current, previousStatus, storeUpsert, moveTask);
+        },
+      },
+    });
+  }
+
   async function handleDelete() {
     onClose();
     try {
@@ -88,6 +107,20 @@ export function TaskContextMenu({ task, x, y, onClose }: Props) {
             {STATUS_META[status].label}
           </button>
         ))}
+        {task.status !== 'archived' && (
+          <>
+            <div className="my-1 border-t border-zinc-200 dark:border-zinc-800" />
+            <button
+              type="button"
+              role="menuitem"
+              onClick={handleArchive}
+              className="w-full flex items-center gap-2.5 px-3 py-1.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-left"
+            >
+              <Archive size={14} />
+              Archive
+            </button>
+          </>
+        )}
         <div className="my-1 border-t border-zinc-200 dark:border-zinc-800" />
         <button
           type="button"
