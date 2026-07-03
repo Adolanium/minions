@@ -13,6 +13,8 @@ import type {
   FileRenameResponse,
   FileUploadResponse,
   FileWriteResponse,
+  MemoryFilesResponse,
+  MemorySaveResponse,
   ContextUsage,
   SearchResponse,
   SessionMetadata,
@@ -284,6 +286,17 @@ export function writeFile(path: string, content: string, expectedModifiedAt?: nu
   return request<FileWriteResponse>('/files/write', {
     method: 'PUT',
     body: JSON.stringify({ path, content, expectedModifiedAt, overwrite }),
+  });
+}
+
+export function fetchMemory() {
+  return request<MemoryFilesResponse>('/memory');
+}
+
+export function saveMemory(key: string, content: string, expectedModifiedAt?: number) {
+  return request<MemorySaveResponse>(`/memory/${encodeURIComponent(key)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ content, expectedModifiedAt }),
   });
 }
 

@@ -11,6 +11,7 @@ import type {
   CompactResult,
   GoalDecision,
   GoalStateSnapshot,
+  MemoryPathEntry,
   ScheduledTask,
   ScheduledTaskInput,
   SessionMetadata,
@@ -599,6 +600,10 @@ export class HermesWorkerAdapter implements AgentAdapter {
 
   async listToolsets(): Promise<AgentToolsetsResponse> {
     return await this.client.request<AgentToolsetsResponse>('toolsets.list');
+  }
+
+  async getMemoryPaths(): Promise<{ hermesHome: string; files: MemoryPathEntry[] }> {
+    return await this.client.request<{ hermesHome: string; files: MemoryPathEntry[] }>('paths.get');
   }
 
   async listScheduledTasks(includeDisabled = false, limit = 100): Promise<ScheduledTask[]> {

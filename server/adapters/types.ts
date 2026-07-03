@@ -5,6 +5,7 @@ import type {
   ContextUsage,
   GoalDecision,
   GoalStateSnapshot,
+  MemoryPathEntry,
   ScheduledTask,
   ScheduledTaskInput,
   SessionMetadata,
@@ -60,6 +61,8 @@ export interface AgentAdapter {
   getMessages(sessionId: string, taskId: string): Promise<TaskMessage[]>;
 
   listToolsets(): Promise<AgentToolsetsResponse>;
+
+  getMemoryPaths(): Promise<{ hermesHome: string; files: MemoryPathEntry[] }>;
 
   getSessionMetadata(sessionId: string): Promise<SessionMetadata | null>;
 

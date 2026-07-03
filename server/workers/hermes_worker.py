@@ -419,6 +419,28 @@ def _clear_model_runtime_overrides(model_cfg: dict[str, Any]) -> None:
         model_cfg.pop(key, None)
 
 
+def _resolve_hermes_home() -> Path:
+    try:
+        _ensure_imports()
+        from hermes_constants import get_hermes_home
+        return Path(get_hermes_home())
+    except Exception:
+        return Path(os.environ.get("HERMES_HOME", str(Path.home() / ".hermes"))).expanduser()
+
+
+def _memory_paths() -> dict[str, Any]:
+    hermes_home = _resolve_hermes_home()
+    memories = hermes_home / "memories"
+    return {
+        "hermesHome": str(hermes_home),
+        "files": [
+            {"key": "memory", "label": "Agent memory", "filename": "MEMORY.md", "path": str(memories / "MEMORY.md")},
+            {"key": "user", "label": "User profile", "filename": "USER.md", "path": str(memories / "USER.md")},
+            {"key": "soul", "label": "Soul", "filename": "SOUL.md", "path": str(hermes_home / "SOUL.md")},
+        ],
+    }
+
+
 def _defaults_from_config(cfg: dict[str, Any] | None = None) -> dict[str, Any]:
     cfg = cfg if cfg is not None else _load_config()
     model_cfg = _model_section(cfg)
@@ -1623,6 +1645,8 @@ def _handle_request(request: dict[str, Any]) -> None:
             _result(request_id, _list_models())
         elif request_type == "toolsets.list":
             _result(request_id, _list_toolsets())
+        elif request_type == "paths.get":
+            _result(request_id, _memory_paths())
         elif request_type == "scheduledTasks.list":
             _result(request_id, list_scheduled_tasks(bool(request.get("includeDisabled")), request.get("limit")))
         elif request_type == "scheduledTasks.get":
