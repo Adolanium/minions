@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo, Fragment } from 'react';
-import { ArrowUp, Loader2, ChevronDown, ChevronRight, Check, Terminal, FileText, FilePenLine, Globe, Code, Wrench, X, Target, Square } from 'lucide-react';
+import { ArrowUp, Loader2, ChevronDown, ChevronRight, Check, Copy, Terminal, FileText, FilePenLine, Globe, Code, Wrench, X, Target, Square } from 'lucide-react';
 import { InputToolbar, ContextRing } from './InputToolbar';
 import { AttachButton, AttachDropOverlay, AttachmentTray, UploadErrorBar } from './ChatAttachments';
 import { MarkdownContent } from './MarkdownContent';
@@ -50,6 +50,32 @@ function ThinkingBlock({ content, isLive }: { content: string; isLive: boolean }
         </div>
       )}
     </div>
+  );
+}
+
+function CopyMessageButton({ content, label }: { content: string; label: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard access denied — nothing useful to do.
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      title={label}
+      aria-label={label}
+      className="inline-flex items-center gap-1 rounded-md p-1 text-zinc-400 opacity-0 transition-opacity hover:text-zinc-600 focus-visible:opacity-100 group-hover:opacity-100 dark:text-zinc-500 dark:hover:text-zinc-300"
+    >
+      {copied ? <Check size={13} /> : <Copy size={13} />}
+    </button>
   );
 }
 
@@ -693,9 +719,12 @@ export function TaskChat({ taskId, initialMessage, initialSettings }: TaskChatPr
                 return (
                   <Fragment key={msg.id}>
                     {compactDivider}
-                    <div ref={isLatestUserMessage ? latestUserMessageRef : undefined} className="flex min-w-0 justify-end">
+                    <div ref={isLatestUserMessage ? latestUserMessageRef : undefined} className="group flex min-w-0 flex-col items-end">
                       <div className="min-w-0 max-w-[92%] overflow-hidden rounded-2xl bg-zinc-100 px-3.5 py-2.5 text-sm leading-relaxed text-zinc-900 whitespace-pre-wrap break-words dark:bg-zinc-800 dark:text-zinc-100 sm:max-w-[85%] sm:px-4">
                         {msg.content}
+                      </div>
+                      <div className="mt-0.5">
+                        <CopyMessageButton content={msg.content} label="Copy request" />
                       </div>
                     </div>
                   </Fragment>
@@ -712,7 +741,7 @@ export function TaskChat({ taskId, initialMessage, initialSettings }: TaskChatPr
                 <Fragment key={msg.id}>
                   {compactDivider}
                   <div className="flex min-w-0 justify-start">
-                    <div className="min-w-0 w-full sm:px-2">
+                    <div className="group min-w-0 w-full sm:px-2">
                       {thinkingToShow && (
                         <ThinkingBlock content={thinkingToShow} isLive={isLiveThinking} />
                       )}
@@ -743,6 +772,11 @@ export function TaskChat({ taskId, initialMessage, initialSettings }: TaskChatPr
                           )
                         )}
                       </div>
+                      {msg.content && !(isLastAssistant && isStreaming) && (
+                        <div className="mt-1 -ml-1">
+                          <CopyMessageButton content={msg.content} label="Copy response" />
+                        </div>
+                      )}
                     </div>
                   </div>
                 </Fragment>
