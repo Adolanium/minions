@@ -1000,15 +1000,44 @@ function ToolsetsPicker({
   onChange,
 }: ToolsetsPickerProps) {
   const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const count = value?.length ?? 0;
   const label = count > 0 ? `Tools (${count})` : 'Tools';
+
+  const updatePosition = useCallback(() => {
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+
+    const padding = 8;
+    const gap = 8;
+    const width = 256;
+    const rect = trigger.getBoundingClientRect();
+    const menuHeight = menuRef.current?.offsetHeight ?? 260;
+    const left = Math.min(
+      Math.max(rect.left, padding),
+      window.innerWidth - width - padding,
+    );
+    const top = Math.max(padding, rect.top - menuHeight - gap);
+
+    setMenuStyle((prev) => {
+      if (prev && prev.left === left && prev.top === top && prev.width === width) return prev;
+      return { position: 'fixed', zIndex: 50, left, top, width };
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    updatePosition();
+  }, [open, updatePosition]);
 
   useEffect(() => {
     if (!open) return;
 
     function handlePointerDown(event: MouseEvent) {
-      if (containerRef.current?.contains(event.target as Node)) return;
+      const target = event.target as Node;
+      if (triggerRef.current?.contains(target) || menuRef.current?.contains(target)) return;
       setOpen(false);
     }
 
@@ -1021,11 +1050,15 @@ function ToolsetsPicker({
 
     document.addEventListener('mousedown', handlePointerDown, { passive: true });
     document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('resize', updatePosition, { passive: true });
+    window.addEventListener('scroll', updatePosition, { capture: true, passive: true });
     return () => {
       document.removeEventListener('mousedown', handlePointerDown);
       document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
     };
-  }, [open]);
+  }, [open, updatePosition]);
 
   function toggle(name: string) {
     const current = value ?? [];
@@ -1034,8 +1067,9 @@ function ToolsetsPicker({
   }
 
   return (
-    <div ref={containerRef} className="relative">
+    <>
       <button
+        ref={triggerRef}
         type="button"
         disabled={disabled}
         title={count > 0 ? `Tools: ${(value ?? []).join(', ')}` : 'Using default toolsets'}
@@ -1050,8 +1084,12 @@ function ToolsetsPicker({
         <span className={compactMobile ? 'sr-only sm:not-sr-only' : undefined}>{label}</span>
       </button>
 
-      {open && (
-        <div className="absolute bottom-full left-0 z-50 mb-2.5 w-64 rounded-xl border border-zinc-200 bg-white py-1.5 shadow-xl outline-none dark:border-zinc-700 dark:bg-zinc-900">
+      {open && createPortal(
+        <div
+          ref={menuRef}
+          style={menuStyle ?? { position: 'fixed', left: -9999, top: -9999, zIndex: 50 }}
+          className="w-64 rounded-xl border border-zinc-200 bg-white py-1.5 shadow-xl outline-none dark:border-zinc-700 dark:bg-zinc-900"
+        >
           <div className="max-h-64 overflow-y-auto">
             <button
               type="button"
@@ -1082,9 +1120,10 @@ function ToolsetsPicker({
               );
             })}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
-    </div>
+    </>
   );
 }
 

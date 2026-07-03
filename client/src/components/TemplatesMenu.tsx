@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { BookMarked, Loader2, Plus, Trash2 } from 'lucide-react';
 import type { ChatRunMode, ReasoningEffort, TaskTemplate } from '@shared/types';
 import { createTemplate, deleteTemplate, fetchTemplates } from '../lib/api';
@@ -31,8 +32,37 @@ export function TemplatesMenu({ disabled = false, compactMobile = false, canSave
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<TaskTemplate | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const saveInputRef = useRef<HTMLInputElement>(null);
+
+  const updatePosition = useCallback(() => {
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+
+    const padding = 8;
+    const gap = 8;
+    const width = 288;
+    const rect = trigger.getBoundingClientRect();
+    const menuHeight = menuRef.current?.offsetHeight ?? 320;
+    const left = Math.min(
+      Math.max(rect.left, padding),
+      window.innerWidth - width - padding,
+    );
+    const top = Math.max(padding, rect.top - menuHeight - gap);
+
+    setMenuStyle((prev) => {
+      if (prev && prev.left === left && prev.top === top && prev.width === width) return prev;
+      return { position: 'fixed', zIndex: 50, left, top, width };
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    updatePosition();
+  }, [open, templates.length, loading, showSaveInput, updatePosition]);
 
   useEffect(() => {
     if (!open) return;
@@ -44,7 +74,8 @@ export function TemplatesMenu({ disabled = false, compactMobile = false, canSave
       .finally(() => setLoading(false));
 
     function handlePointerDown(event: MouseEvent) {
-      if (containerRef.current?.contains(event.target as Node)) return;
+      const target = event.target as Node;
+      if (containerRef.current?.contains(target) || menuRef.current?.contains(target)) return;
       setOpen(false);
     }
 
@@ -57,11 +88,15 @@ export function TemplatesMenu({ disabled = false, compactMobile = false, canSave
 
     document.addEventListener('mousedown', handlePointerDown, { passive: true });
     document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('resize', updatePosition, { passive: true });
+    window.addEventListener('scroll', updatePosition, { capture: true, passive: true });
     return () => {
       document.removeEventListener('mousedown', handlePointerDown);
       document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
     };
-  }, [open]);
+  }, [open, updatePosition]);
 
   useEffect(() => {
     if (!open) {
@@ -120,6 +155,7 @@ export function TemplatesMenu({ disabled = false, compactMobile = false, canSave
   return (
     <div ref={containerRef} className="relative shrink-0">
       <button
+        ref={triggerRef}
         type="button"
         disabled={disabled}
         title="Templates"
@@ -135,8 +171,11 @@ export function TemplatesMenu({ disabled = false, compactMobile = false, canSave
         <span className={compactMobile ? 'sr-only sm:not-sr-only' : undefined}>Templates</span>
       </button>
 
-      {open && (
-        <div className="absolute bottom-full left-0 mb-2.5 z-50">
+      {open && createPortal(
+        <div
+          ref={menuRef}
+          style={menuStyle ?? { position: 'fixed', left: -9999, top: -9999, zIndex: 50 }}
+        >
           <div className="w-72 max-h-80 overflow-y-auto rounded-lg bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-lg p-2">
             {loading ? (
               <div className="flex items-center justify-center py-6 text-zinc-400 dark:text-zinc-500">
@@ -212,8 +251,8 @@ export function TemplatesMenu({ disabled = false, compactMobile = false, canSave
               )}
             </div>
           </div>
-          <div className="absolute -bottom-[3px] left-[13px] w-1.5 h-1.5 bg-white dark:bg-zinc-800 border-r border-b border-zinc-200 dark:border-zinc-700 rotate-45" />
-        </div>
+        </div>,
+        document.body,
       )}
 
       {deleteTarget && (
