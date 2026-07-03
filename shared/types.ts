@@ -52,6 +52,8 @@ export interface ToolProgressEvent {
   status: 'running' | 'completed' | 'error';
   duration?: number;
   label?: string;
+  args?: string;
+  result?: string;
 }
 
 export type TaskRunKind = 'chat' | 'goal' | 'compact';

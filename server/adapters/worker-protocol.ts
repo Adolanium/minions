@@ -101,6 +101,8 @@ export type WorkerEvent =
       status?: 'running' | 'completed' | 'error';
       duration?: number;
       label?: string | null;
+      args?: string;
+      result?: string;
     }
   | { id: string; type: 'done'; sessionId?: string; context?: ContextUsage | null; interrupted?: boolean }
   | { id: string; type: 'error'; error: string | WorkerErrorPayload };

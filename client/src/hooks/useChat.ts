@@ -35,6 +35,8 @@ type LiveEvent =
       status?: ToolProgressEvent['status'];
       duration?: number;
       label?: string;
+      args?: string;
+      result?: string;
     }
   | { type: 'done'; sessionId?: string; context?: ContextUsage | null; interrupted?: boolean }
   | { type: 'error'; error?: string };
@@ -75,6 +77,8 @@ function mergeToolProgress(tools: ToolProgressEvent[], event: Extract<LiveEvent,
     status: event.status ?? 'running',
     duration: event.duration,
     label: event.label,
+    args: event.args,
+    result: event.result,
   };
 
   if (tool.status === 'running') return [...tools, tool];
@@ -86,6 +90,8 @@ function mergeToolProgress(tools: ToolProgressEvent[], event: Extract<LiveEvent,
         ...next[i],
         ...tool,
         label: tool.label ?? next[i].label,
+        args: tool.args ?? next[i].args,
+        result: tool.result ?? next[i].result,
       };
       return next;
     }
